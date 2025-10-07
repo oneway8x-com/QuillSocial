@@ -243,12 +243,15 @@ async function safePostAccessToken(
     log.info("LinkedIn accessToken response status", { status: resp.status });
     return resp.data;
   } catch (err) {
-    const log = logger.getChildLogger({
-      prefix: ["[linkedinsocial/callback]"],
-    });
+    const log = logger.getChildLogger({ prefix: ["[linkedinsocial/callback]"] });
+    const status = (err as any)?.response?.status;
+    const data = (err as any)?.response?.data;
+    // Avoid logging the full params which may include the code/secret; only log masked summary
     log.error("Error fetching LinkedIn access token", {
       message: (err as any)?.message ?? String(err),
-      stack: (err as any)?.stack,
+      status,
+      // Include response body to diagnose 400 errors from LinkedIn (scopes, redirect_uri, etc.)
+      responseBody: data,
     });
     throw err;
   }

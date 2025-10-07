@@ -64,7 +64,7 @@ const apps: AppListItem[] = [
   {
     title: "Instagram (Business)",
     description:
-      "Instagram is a photo and video sharing platform from Meta that supports posts, stories, reels, and direct messaging. This integration uses the Instagram Graph API (via Facebook Login) and is intended for Business or Creator Instagram accounts that are linked to a Facebook Page. Authentication is performed through Facebook Login (not Instagram's native login). Full management features can include scheduling and publishing posts & reels, reading insights, managing comments and mentions, and limited direct message handling. The integration requires specific Facebook permissions (for example: pages_show_list, instagram_basic, instagram_content_publish, instagram_manage_comments, instagram_manage_insights, and sometimes business_management) and often requires App Review.",
+      "Instagram is a photo and video sharing platform from Meta that supports posts, stories, reels, and direct messaging. This integration uses the Instagram Graph API (via Facebook Login) and is intended for Business or Creator Instagram accounts that are linked to a Facebook Page.",
     logoSrc: "/logo/instagram-social-logo.svg",
     installProps: {
       type: "instagram_social",

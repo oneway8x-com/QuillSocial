@@ -4,6 +4,7 @@ import { getClient } from "./getClient";
 import { PageInfoData } from "./type";
 import prisma from "@quillsocial/prisma";
 import axios from "axios";
+import logger from "@quillsocial/lib/logger";
 
 /** ===== Version handling (REST header: LinkedIn-Version) ===== */
 const _rawLinkedInVersion =
@@ -178,16 +179,42 @@ export async function getLinkedInPages(accessToken: string) {
   let pagesResponse;
   let isRest = true;
 
+  const log = logger.getChildLogger({ prefix: ["[linkedinsocial/manager]"] });
   try {
     pagesResponse = await axios.get(url, { headers });
   } catch (err: any) {
-    if (err.response?.status === 426) {
+    const status = err?.response?.status;
+    const respData = err?.response?.data;
+    log.warn("LinkedIn organizationAcls request failed", {
+      url,
+      status,
+      data: respData,
+    });
+
+    if (status === 426) {
       // Fallback to v2
       url =
         "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR";
       headers = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
-      pagesResponse = await axios.get(url, { headers });
-      isRest = false;
+      try {
+        pagesResponse = await axios.get(url, { headers });
+        isRest = false;
+      } catch (err2: any) {
+        log.error("LinkedIn organizationAcls v2 fallback failed", {
+          url,
+          status: err2?.response?.status,
+          data: err2?.response?.data,
+        });
+        // If v2 fallback also fails with permission/400-series, treat as no pages instead of throwing
+        if ([400, 401, 403, 404].includes(err2?.response?.status)) {
+          return [];
+        }
+        throw err2;
+      }
+    } else if ([400, 401, 403, 404].includes(status)) {
+      // Common case: token lacks organization scopes or account has no org admin rights.
+      // Don't throw — return empty list so personal profile can still be saved.
+      return [];
     } else {
       throw err;
     }
@@ -204,8 +231,20 @@ export async function getLinkedInPages(accessToken: string) {
     : "https://api.linkedin.com/v2/organizations";
 
   const pageDetailUrl = `${orgApiBase}?${buildIdsParam(pages, isRest)}`;
-  const pageDetailsResponse = await axios.get(pageDetailUrl, { headers });
-  if (pageDetailsResponse.status !== 200) return undefined;
+  let pageDetailsResponse;
+  try {
+    pageDetailsResponse = await axios.get(pageDetailUrl, { headers });
+    if (pageDetailsResponse.status !== 200) return undefined;
+  } catch (err: any) {
+    log.warn("LinkedIn organization details request failed", {
+      url: pageDetailUrl,
+      status: err?.response?.status,
+      data: err?.response?.data,
+    });
+    // If access denied or bad request regarding org details, assume no pages
+    if ([400, 401, 403, 404].includes(err?.response?.status)) return [];
+    throw err;
+  }
 
   const data = pageDetailsResponse.data as PageInfoData;
   const results = (isRest ? data.results : data) as any;

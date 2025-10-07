@@ -90,15 +90,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     return res.status(200);
   } catch (error) {
-    console.error(error);
+    // Ensure we always log useful, serialised error information instead of [object Object]
+    const formatError = (err: unknown) => {
+      if (err instanceof Error) {
+        return {
+          message: err.message,
+          name: err.name,
+          stack: err.stack,
+        } as const;
+      }
+      try {
+        return JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      } catch (_e) {
+        return { message: typeof err === "string" ? err : String(err) };
+      }
+    };
+
+    const serialized = formatError(error);
+    // Log with serialized details to make Cloud Run logs readable
+    console.error("/api/integrations error:", serialized);
 
     if (error instanceof HttpError) {
-      return res.status(error.statusCode).json({ message: error.message });
+      return res.status(error.statusCode).json({ message: error.message, details: serialized });
     }
     if (error instanceof Error) {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({ message: error.message, details: serialized });
     }
-    return res.status(404).json({ message: `API handler not found` });
+    return res.status(500).json({ message: `API handler error`, details: serialized });
   }
 };
 
