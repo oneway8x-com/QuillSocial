@@ -229,19 +229,20 @@ export default function Login({
           </form>
 
           <hr className="border-subtle my-8" />
-          {/* <div className="space-y-3 text-center">
+          <div className="space-y-3 text-center">
             <Button
               color="secondary"
               className="w-auto justify-center gap-2 rounded-full"
               data-testid="google"
               onClick={async (e) => {
                 e.preventDefault();
-                await signIn("google");
-              }}>
-              <img className="h-6 w-6" src="/img/gg.png"></img>
+                await signIn("google", { callbackUrl: callbackUrl || undefined });
+              }}
+            >
+              <img className="h-6 w-6" src="/img/gg.png" alt="Google" />
               {t("signin_with_google")}
             </Button>
-          </div> */}
+          </div>
           {/* <div className="my-2 space-y-3 text-center">
             <Button
               color="secondary"
@@ -342,11 +343,20 @@ const _getServerSideProps = async function getServerSideProps(
     };
   }
   const csrfToken = await getCsrfToken(context);
+  const isGoogleLoginEnabled = !!process.env.GOOGLE_API_CREDENTIALS && (() => {
+    try {
+      const parsed = JSON.parse(process.env.GOOGLE_API_CREDENTIALS || "{}");
+      return !!(parsed?.web?.client_id && parsed?.web?.client_secret);
+    } catch (e) {
+      return false;
+    }
+  })();
+
   return {
     props: {
       csrfToken: csrfToken || null,
       trpcState: ssr.dehydrate(),
-      isGoogleLoginEnabled: true,
+      isGoogleLoginEnabled,
       totpEmail,
     },
   };

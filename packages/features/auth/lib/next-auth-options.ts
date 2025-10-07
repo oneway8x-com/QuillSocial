@@ -52,7 +52,9 @@ const safeParseGoogleCreds = (raw: string): any => {
 };
 const { client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET } =
   safeParseGoogleCreds(GOOGLE_API_CREDENTIALS)?.web || {};
-const IS_GOOGLE_LOGIN_ENABLED = true;
+const IS_GOOGLE_LOGIN_ENABLED = !!(
+  GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
+);
 
 const usernameSlug = (username: string) =>
   slugify(username) + "-" + randomString(6).toLowerCase();

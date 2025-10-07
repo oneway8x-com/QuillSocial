@@ -209,20 +209,24 @@ export default function Signup({ prepopulateFormValues, token }: SignupProps) {
                   Login Instead
                 </Button>
               </div>
-              {/* <hr className="border-subtle my-8" />
+              <hr className="border-subtle my-8" />
               <div className="my-2 space-y-3 text-center">
                 <Button
                   color="secondary"
                   className="w-auto justify-center gap-2 rounded-full"
-                  data-testid="linked-in"
+                  data-testid="google-signup"
                   onClick={async (e) => {
                     e.preventDefault();
-                    await signIn("linkedin");
-                  }}>
-                  <img src={`${WEBAPP_URL}/logo/linkedin-social-logo.svg`} width={24} height={24} />
-                  Continue with LinkedIn
+                    const cb = searchParams?.get("callbackUrl")
+                      ? `${WEBAPP_URL}${searchParams.get("callbackUrl")}`
+                      : `${WEBAPP_URL}/getting-started?from=signup`;
+                    await signIn("google", { callbackUrl: cb });
+                  }}
+                >
+                  <img className="h-6 w-6" src="/img/gg.png" alt="Google" />
+                  Continue with Google
                 </Button>
-              </div> */}
+              </div>
             </form>
           </FormProvider>
         </div>
@@ -279,7 +283,16 @@ export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
   const token = z.string().optional().parse(ctx.query.token);
 
   const props = {
-    isGoogleLoginEnabled: true,
+    isGoogleLoginEnabled:
+      !!process.env.GOOGLE_API_CREDENTIALS &&
+      (() => {
+        try {
+          const parsed = JSON.parse(process.env.GOOGLE_API_CREDENTIALS || "{}");
+          return !!(parsed?.web?.client_id && parsed?.web?.client_secret);
+        } catch (e) {
+          return false;
+        }
+      })(),
     isSAMLLoginEnabled: false,
     trpcState: ssr.dehydrate(),
     prepopulateFormValues: undefined,

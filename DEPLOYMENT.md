@@ -60,4 +60,15 @@ chmod +x ./scripts/deploy-cloudrun.sh
 gcloud builds submit --tag gcr.io/[PROJECT-ID]/quillsocial-backend
 ```
 
+## Google OAuth setup
+
+This project supports Google Sign-In via NextAuth. To enable it set the environment variable `GOOGLE_API_CREDENTIALS` to the JSON object returned by Google when creating OAuth credentials (the `web` key is used). Example (single-line):
+
+```json
+{"web":{"client_id":"YOUR_GOOGLE_CLIENT_ID","client_secret":"YOUR_GOOGLE_CLIENT_SECRET","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","redirect_uris":["https://yourdomain.com/api/auth/callback/google"]}}
+```
+
+Also ensure `NEXTAUTH_SECRET` and `NEXTAUTH_URL` are set. After setting these variables and deploying the app the Google Sign-In button on the login and signup pages will trigger the OAuth flow.
+
+
 - For custom domains, use `gcloud run domain-mappings create ...` (see Google Cloud docs).
