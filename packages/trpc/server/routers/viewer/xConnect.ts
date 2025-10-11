@@ -61,7 +61,7 @@ const bulkGeneratePreviewInputSchema = z.object({
 
 const queueEngagementInputSchema = z.object({
   xPostIds: z.array(z.string()).min(1).max(50),
-  template: z.string().max(280),
+  template: z.string().min(1, "Template cannot be empty").max(280, "Template must be 280 characters or less"),
   topics: z.array(z.string()).optional(),
 });
 
@@ -536,6 +536,15 @@ export const xConnectRouter = router({
       for (let i = 0; i < allowed; i++) {
         const post = posts[i];
         const plannedComment = renderTemplate(template, post.authorHandle, topics);
+
+        // Safety check: ensure comment is not empty
+        if (!plannedComment || plannedComment.trim() === '') {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Generated comment is empty. Please provide a valid template.",
+          });
+        }
+
         const scheduledAt = new Date(now.getTime() + i * settings.rateSpacingMs);
 
         await prisma.xEngagementJob.create({

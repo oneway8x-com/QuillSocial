@@ -792,20 +792,56 @@ export async function replyToTweet(
       prefix: ["[xconsumerkeys/twitterManager/replyToTweet]"],
     });
 
-    log.info("Attempting to reply to tweet", { tweetId, textLength: text.length });
+    // Validate tweet ID format
+    if (!tweetId || typeof tweetId !== 'string' || tweetId.trim() === '') {
+      log.error("Invalid tweet ID", { tweetId });
+      return {
+        success: false,
+        error: "Invalid tweet ID: must be a non-empty string",
+      };
+    }
+
+    // Validate and sanitize text
+    const sanitizedText = text?.trim() || '';
+    if (sanitizedText === '') {
+      log.error("Empty reply text", { originalText: text });
+      return {
+        success: false,
+        error: "Reply text cannot be empty",
+      };
+    }
+
+    if (sanitizedText.length > 280) {
+      log.error("Reply text too long", { length: sanitizedText.length });
+      return {
+        success: false,
+        error: `Reply text too long: ${sanitizedText.length} characters (max 280)`,
+      };
+    }
+
+    log.info("Attempting to reply to tweet", {
+      tweetId: tweetId.trim(),
+      textLength: sanitizedText.length,
+      textPreview: sanitizedText.substring(0, 50)
+    });
 
     // Post the reply with retry logic
+    // The client is already a v2 write client
+    // Use tweet() with reply payload instead of reply() to have more control
     const reply = await retryWithBackoff(
-      () =>
-        client.reply(text, tweetId),
+      () => client.tweet(sanitizedText, {
+        reply: {
+          in_reply_to_tweet_id: tweetId.trim()
+        }
+      }),
       { retries: 3, baseDelayMs: 1000 }
     );
 
-    log.info("Reply posted successfully", { replyId: reply.data?.id });
+    log.info("Reply posted successfully", { replyId: reply?.data?.id });
 
     return {
       success: true,
-      tweetId: reply.data?.id,
+      tweetId: reply?.data?.id,
     };
   } catch (err: any) {
     const log = logger.getChildLogger({
@@ -823,6 +859,19 @@ export async function replyToTweet(
       return {
         success: false,
         error: `${errorClassification.message}: ${errorClassification.solution}`,
+      };
+    }
+
+    // Handle 400 errors with more detail
+    if (err.code === 400 || err?.response?.status === 400) {
+      log.error("400 Error replying to tweet", {
+        error: serializeError(err),
+        tweetId,
+        textLength: text?.length
+      });
+      return {
+        success: false,
+        error: `Invalid request: ${err.message || "One or more parameters invalid"}. Check that the tweet ID is valid and the text meets Twitter requirements.`,
       };
     }
 

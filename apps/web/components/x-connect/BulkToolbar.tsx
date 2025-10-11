@@ -82,10 +82,15 @@ export default function BulkToolbar({
             onChange={(e) => onTemplateChange(e.target.value)}
             placeholder="Use {author} for @username and {topics} for selected topics"
           />
-          <p className="text-muted mt-1 text-xs">
-            Tokens: <code>{"{author}"}</code> → @username, <code>{"{topics}"}</code> → selected
-            topics
-          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-muted text-xs">
+              Tokens: <code>{"{author}"}</code> → @username, <code>{"{topics}"}</code> → selected
+              topics
+            </p>
+            <p className="text-muted text-xs">
+              {(template || DEFAULT_TEMPLATE).length}/280 characters
+            </p>
+          </div>
         </div>
 
         {/* Presets */}

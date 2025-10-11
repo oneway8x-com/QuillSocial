@@ -15,6 +15,11 @@ import {
 } from "@quillsocial/ui";
 import { AlertCircle, Clock, Zap } from "lucide-react";
 
+const DEFAULT_TEMPLATE = `Let's #connect if you're into:
+🎨 Frontend • 💼 Backend • 👩‍💻 GenAI • ✨ Full-stack • 🧑‍💻 DevOps • ✅ DSA • 💻 LeetCode • 🧠 AI/ML • 🧱 Web3 • 📊 Data Science • 💸 Freelancing • 🐍 Python • 🔨 Startups
+
+Hey {author}, loved your post! I'm building in public and would love to connect with folks into {topics}. #buildinpublic #letsconnect`;
+
 interface EngageModalProps {
   open: boolean;
   onClose: () => void;
@@ -52,9 +57,12 @@ export default function EngageModal({
   });
 
   const handleConfirm = () => {
+    // Use default template if template is empty
+    const finalTemplate = template && template.trim() !== "" ? template : DEFAULT_TEMPLATE;
+
     queueMutation.mutate({
       xPostIds: selectedPostIds,
-      template,
+      template: finalTemplate,
       topics,
     });
   };
