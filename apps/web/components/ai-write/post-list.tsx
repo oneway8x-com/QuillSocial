@@ -183,21 +183,28 @@ function PostList() {
         setIsLoading(false);
         if (typeof dataResponse === "object" && dataResponse !== null) {
           const { data } = dataResponse;
-          const postsFromDb = data.map((x: any) => {
-            return {
-              id: x.id,
-              topic: x.idea,
-              content: x.content,
-              image: x.imagesDataURL,
-              avatarUrl: x.credential?.avatarUrl,
-              name: x.credential?.name,
-              emailOrUserName: x.credential?.emailOrUserName,
-              credentialId: x.credential?.id,
-              createdDate: x.createdDate,
-              pageId: x.pageId,
-            };
-          });
-          setAllPosts(postsFromDb);
+          if (Array.isArray(data)) {
+            const postsFromDb = data.map((x: any) => {
+              return {
+                id: x.id,
+                idea: x.idea,
+                topic: x.idea,
+                content: x.content,
+                image: x.imagesDataURL,
+                avatarUrl: x.credential?.avatarUrl,
+                name: x.credential?.name,
+                emailOrUserName: x.credential?.emailOrUserName,
+                credentialId: x.credential?.id,
+                createdDate: x.createdDate,
+                pageId: x.pageId,
+                appId: x.appId,
+              };
+            });
+            setAllPosts(postsFromDb);
+          } else {
+            console.error("Data is not an array:", data);
+            setAllPosts([]);
+          }
         }
       }
     }, 150);

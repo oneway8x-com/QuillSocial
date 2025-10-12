@@ -49,6 +49,7 @@
     "@fullcalendar/interaction": "^6.1.9",
     "@fullcalendar/react": "^6.1.9",
     "@fullcalendar/timegrid": "^6.1.9",
+    "@google-cloud/pubsub": "^5.2.0",
     "@google-cloud/storage": "^7.1.0",
     "@types/formidable": "^3.4.3",
     "city-timezones": "^1.2.1",

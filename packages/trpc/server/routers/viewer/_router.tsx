@@ -5,10 +5,12 @@ import { appsRouter } from "./apps/_router";
 import { authRouter } from "./auth/_router";
 import { billingsRouter } from "./billings/_router";
 import { googleWorkspaceRouter } from "./googleWorkspace/_router";
+import { notificationsRouter } from "./notifications/_router";
 import { openaiUsageRouter } from "./openaiUsage";
 import { viewerOrganizationsRouter } from "./organizations/_router";
 import { socialsRouter } from "./socials/_router";
 import { viewerTeamsRouter } from "./teams/_router";
+import { xConnectRouter } from "./xConnect";
 
 export const viewerRouter = mergeRouters(
   loggedInViewerRouter,
@@ -23,5 +25,7 @@ export const viewerRouter = mergeRouters(
     billings: billingsRouter,
     socials: socialsRouter,
     openaiUsage: openaiUsageRouter,
+    xConnect: xConnectRouter,
+    notifications: notificationsRouter,
   })
 );

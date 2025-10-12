@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Optimize scroll performance */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
 /**
 * Add css variables here as well for light mode in addition to tailwind.config to avoid FOUC
 */
@@ -640,13 +650,13 @@ input::-webkit-color-swatch {
 
 .ql-toolbar.ql-snow {
   border: none !important;
-  border-style: none !important; 
+  border-style: none !important;
 }
 
 .fc-h-event,
 .fc-v-event {
-  background-color: transparent; 
-  border: none; 
+  background-color: transparent;
+  border: none;
   display: block;
 }
 .recharts-bar-rectangle:hover {

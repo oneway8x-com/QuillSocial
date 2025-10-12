@@ -1,5 +1,6 @@
 import { redirectIfTrialOver } from "../payments/redirectIfTrialOver";
 import { ModalAccount } from "./SocialAccountsDialog";
+import { NotificationDropdown } from "./NotificationDropdown";
 import SocialAvatar from "./SocialAvatar";
 import { BillingNotifications } from "./components/BillingNotifications";
 import useAddAppMutation from "@quillsocial/app-store/_utils/useAddAppMutation";
@@ -65,6 +66,7 @@ import {
   Newspaper,
   Linkedin,
   BookOpen,
+  MessageCircle,
 } from "@quillsocial/ui/components/icon";
 import type { User as UserAuth } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -583,6 +585,15 @@ const navigation: NavigationItemType[] = [
     icon: CalendarDays,
   },
   {
+    name: "X Connect",
+    href: "/x-connect",
+    icon: MessageCircle,
+    isCurrent: ({ router }) => {
+      const path = router.asPath.split("?")[0];
+      return path.startsWith("/x-connect");
+    },
+  },
+  {
     name: "Headline Generator",
     href: "/tools/linkedin/headline-generator",
     icon: Newspaper,
@@ -971,13 +982,16 @@ function SideBar({ bannersHeight, user, currentUser }: SideBarProps) {
 
         <ul className="w-full pb-3 lg:px-3">
           <header className="items-center justify-between pl-4 pt-4 lg:flex lg:pl-0 ">
-            <div data-testid="user-dropdown-trigger">
-              <span className="hidden md:inline">
-                <UserDropdown currentUser={currentUser} />
-              </span>
-              <span className="block md:hidden">
-                <UserDropdown small currentUser={currentUser} />
-              </span>
+            <div className="flex items-center gap-3 w-full">
+              <NotificationDropdown />
+              <div data-testid="user-dropdown-trigger" className="flex-1">
+                <span className="hidden md:inline">
+                  <UserDropdown currentUser={currentUser} />
+                </span>
+                <span className="block md:hidden">
+                  <UserDropdown small currentUser={currentUser} />
+                </span>
+              </div>
             </div>
           </header>
         </ul>
@@ -992,6 +1006,11 @@ export function ShellMain(props: LayoutProps) {
 
   return (
     <>
+      {/* Fixed Notification Button - Top Right Corner (Desktop only) */}
+      <div className="hidden md:block fixed top-4 right-6 z-50">
+        <NotificationDropdown />
+      </div>
+
       <div
         className={classNames(
           "bg-default flex items-center border-b px-4 pb-4 pt-4 sm:px-6 md:mb-8 md:mt-0 md:px-8 md:pb-6 md:pt-6 lg:px-6",
@@ -1128,6 +1147,7 @@ function TopNav() {
           <span className="hover:bg-muted hover:text-emphasis text-default group flex items-center rounded-full text-sm font-medium lg:hidden">
             <KBarTrigger />
           </span>
+          <NotificationDropdown />
           <button className="hover:bg-muted hover:text-subtle text-muted rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
             <span className="sr-only">{t("settings")}</span>
             <Link href="/settings/my-account/profile">

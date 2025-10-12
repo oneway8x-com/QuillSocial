@@ -8,10 +8,8 @@ import { metadata as googlecloudstorage__metadata_ts } from "./googlecloudstorag
 import { metadata as instagramsocial__metadata_ts } from "./instagramsocial/_metadata";
 import { metadata as linkedinsocial__metadata_ts } from "./linkedinsocial/_metadata";
 import { metadata as threadssocial__metadata_ts } from "./threadssocial/_metadata";
-import { metadata as twitterv1social__metadata_ts } from "./twitterv1social/_metadata";
 import typeform_config_json from "./typeform/config.json";
 import { metadata as xconsumerkeyssocial__metadata_ts } from "./xconsumerkeyssocial/_metadata";
-import { metadata as xsocial__metadata_ts } from "./xsocial/_metadata";
 
 export const appStoreMetadata = {
   chatgptai: chatgptai__metadata_ts,
@@ -20,8 +18,6 @@ export const appStoreMetadata = {
   instagramsocial: instagramsocial__metadata_ts,
   linkedinsocial: linkedinsocial__metadata_ts,
   threadssocial: threadssocial__metadata_ts,
-  twitterv1social: twitterv1social__metadata_ts,
   typeform: typeform_config_json,
   xconsumerkeyssocial: xconsumerkeyssocial__metadata_ts,
-  xsocial: xsocial__metadata_ts,
 };

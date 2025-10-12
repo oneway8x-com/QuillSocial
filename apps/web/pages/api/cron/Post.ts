@@ -1,5 +1,4 @@
 import { LinkedinManager } from "@quillsocial/app-store/linkedinsocial/lib";
-import { TwitterV1Manager } from "@quillsocial/app-store/twitterv1social/lib";
 import { post } from "@quillsocial/app-store/xconsumerkeyssocial/lib";
 import { TWITTER_APP_ID } from "@quillsocial/lib/constants";
 import prisma from "@quillsocial/prisma";
@@ -53,12 +52,10 @@ export default async function handler(
   if (posts.length > 0) {
     await Promise.all(
       posts.map((p) => {
-        if (p.credential?.appId === TWITTER_APP_ID) {
-          return TwitterV1Manager.post(p.id);
-        } else if (p.credential?.appId === "linkedin-social") {
+        if (p.credential?.appId === "linkedin-social") {
           return LinkedinManager.post(p.id);
         } else if (p.credential?.appId === "xconsumerkeys-social") {
-          post(p.id);
+          return post(p.id);
         }
         return;
       })

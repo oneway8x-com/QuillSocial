@@ -110,13 +110,22 @@ export function classifyTwitter403Error(error: any): {
  * Retry a function that may throw HTTP errors (from twitter-api-v2).
  * On 429 responses, it will respect `Retry-After` (seconds) or `x-rate-limit-reset` headers when available.
  * Falls back to exponential backoff with jitter.
+ *
+ * IMPORTANT: For cron jobs, set maxWaitMs to prevent long hangs (e.g., 30000 = 30 seconds)
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  opts: { retries?: number; baseDelayMs?: number } = {}
+  opts: {
+    retries?: number;
+    baseDelayMs?: number;
+    userId?: number;
+    maxWaitMs?: number; // Maximum wait time between retries (prevents 7+ minute waits)
+  } = {}
 ): Promise<T> {
-  const retries = opts.retries ?? 4;
+  const retries = opts.retries ?? 3; // Reduced from 4 to 3 for faster failures
   const base = opts.baseDelayMs ?? 500; // 500ms
+  const userId = opts.userId;
+  const maxWaitMs = opts.maxWaitMs ?? 60000; // Default max 60 seconds (was unlimited before)
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -160,13 +169,39 @@ export async function retryWithBackoff<T>(
         waitMs = exp + jitter;
       }
 
+      // Cap the wait time to maxWaitMs to prevent extremely long waits
+      const originalWaitMs = waitMs;
+      waitMs = Math.min(waitMs, maxWaitMs);
+      const wasCapped = originalWaitMs > maxWaitMs;
+
       const log = logger.getChildLogger({ prefix: ["[xconsumerkeys/twitterManager/retry]"] });
-      log.warn(`Rate limited (429). Retrying attempt=${attempt + 1}/${retries} after ${waitMs}ms`, {
+      log.warn(`Rate limited (429). Retrying attempt=${attempt + 1}/${retries} after ${waitMs}ms${wasCapped ? ` (capped from ${originalWaitMs}ms)` : ''}`, {
         attempt,
         retries,
         waitMs,
+        originalWaitMs: wasCapped ? originalWaitMs : undefined,
+        capped: wasCapped,
         error: serializeError(err),
+        userId,
       });
+
+      // Create notification for rate limit if userId is provided
+      // Only notify on first rate limit attempt to avoid spam
+      if (userId && attempt === 0) {
+        log.info("Creating rate limit notification for user", { userId });
+        const { createTwitterRateLimitNotification } = await import("@quillsocial/lib/notification-helper");
+        await createTwitterRateLimitNotification(userId, {
+          code: 429,
+          message: wasCapped
+            ? `Rate limited during API request. Will retry after ${Math.ceil(waitMs / 1000)} seconds (Twitter requested ${Math.ceil(originalWaitMs / 1000)}s but capped for performance).`
+            : `Rate limited during API request. Retrying after ${Math.ceil(waitMs / 1000)} seconds.`,
+        }).catch((notifError) => {
+          log.error("Failed to create rate limit notification", {
+            error: notifError.message,
+            userId,
+          });
+        });
+      }
 
       await sleep(waitMs);
       // continue loop to retry
@@ -234,9 +269,11 @@ export async function searchXCommunityIdByName(
     }
 
     // Use retry wrapper to handle rate limits (429) more gracefully.
+    // maxWaitMs: 30000 = 30 seconds max wait for community search
     const communities = await retryWithBackoff(() => client.searchCommunities(name), {
-      retries: 4,
+      retries: 3,
       baseDelayMs: 500,
+      maxWaitMs: 30000,
     });
 
     // Try to handle multiple possible response shapes from the client.
@@ -392,20 +429,22 @@ export const post = async (
       if (twitterPost.xcommunity && twitterPost.xcommunity.trim() !== "") {
         log.info("Posting to community", { communityId: twitterPost.xcommunity });
         // Post to community with retry logic
+        // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs)
         tweet = await retryWithBackoff(
           () => client.tweet(tweetText, {
             community_id: twitterPost.xcommunity!
           }),
-          { retries: 3, baseDelayMs: 1000 }
+          { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
         );
         log.info("Tweet posted successfully to community", {
           communityId: twitterPost.xcommunity
         });
       } else {
         // Post regular tweet with retry logic
+        // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs)
         tweet = await retryWithBackoff(
           () => client.tweet(tweetText),
-          { retries: 3, baseDelayMs: 1000 }
+          { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
         );
         log.info("Tweet posted successfully (no community)");
       }
@@ -549,3 +588,381 @@ export const post = async (
     };
   }
 };
+
+/**
+ * Search for recent tweets by hashtags (for X Connect Engagement)
+ * @param credentialId - The credential ID to use
+ * @param hashtags - Array of hashtags to search (without # symbol)
+ * @param options - Search options (max results, language, filters, pagination)
+ */
+export async function searchHashtags(
+  credentialId: number,
+  hashtags: string[],
+  options: {
+    max?: number;
+    lang?: string;
+    minLikes?: number;
+    minReplies?: number;
+    excludeKeywords?: string[];
+    nextToken?: string;
+  } = {}
+): Promise<{
+  posts: Array<{
+    id: string;
+    authorId: string;
+    authorHandle: string;
+    authorName?: string;
+    text: string;
+    likeCount: number;
+    replyCount: number;
+    lang?: string;
+    createdAt?: Date;
+  }>;
+  nextToken?: string;
+  error?: string;
+}> {
+  try {
+    const { client, credentials } = await getXConsumerKeysClient(credentialId);
+    if (!client || !credentials) {
+      return { posts: [], error: "Could not create X client with provided credentials." };
+    }
+
+    // Build query
+    let query = hashtags.map((tag) => `#${tag.replace(/^#/, "")}`).join(" OR ");
+
+    // Add language filter
+    if (options.lang) {
+      query += ` lang:${options.lang}`;
+    }
+
+    // Add exclude keywords
+    if (options.excludeKeywords && options.excludeKeywords.length > 0) {
+      options.excludeKeywords.forEach((keyword) => {
+        query += ` -${keyword}`;
+      });
+    }
+
+    // Exclude retweets and replies for cleaner results
+    query += " -is:retweet -is:reply";
+
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/searchHashtags]"],
+    });
+    log.info("Searching tweets", { query, max: options.max });
+
+    // Search tweets with retry logic
+    // maxWaitMs: 30000 = 30 seconds max wait for search
+    const searchResult = await retryWithBackoff(
+      () =>
+        client.search(query, {
+          max_results: Math.min(options.max || 20, 100),
+          "tweet.fields": ["author_id", "created_at", "public_metrics", "lang"],
+          "user.fields": ["username", "name"],
+          expansions: ["author_id"],
+          next_token: options.nextToken,
+        }),
+      { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
+    );
+
+    const posts: Array<{
+      id: string;
+      authorId: string;
+      authorHandle: string;
+      authorName?: string;
+      text: string;
+      likeCount: number;
+      replyCount: number;
+      lang?: string;
+      createdAt?: Date;
+    }> = [];
+
+    const users = searchResult.includes?.users || [];
+
+    for (const tweet of searchResult.tweets || []) {
+      const author = users.find((u: any) => u.id === tweet.author_id);
+      const metrics = tweet.public_metrics;
+
+      // Apply filters
+      if (options.minLikes && metrics && metrics.like_count < options.minLikes) continue;
+      if (options.minReplies && metrics && metrics.reply_count < options.minReplies) continue;
+
+      posts.push({
+        id: tweet.id,
+        authorId: tweet.author_id!,
+        authorHandle: author?.username || "unknown",
+        authorName: author?.name,
+        text: tweet.text,
+        likeCount: metrics?.like_count || 0,
+        replyCount: metrics?.reply_count || 0,
+        lang: tweet.lang,
+        createdAt: tweet.created_at ? new Date(tweet.created_at) : undefined,
+      });
+    }
+
+    log.info("Search completed", { found: posts.length });
+
+    return {
+      posts,
+      nextToken: searchResult.meta?.next_token,
+    };
+  } catch (err: any) {
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/searchHashtags]"],
+    });
+    log.error("Failed to search hashtags", { error: serializeError(err) });
+    return {
+      posts: [],
+      error: `Failed to search: ${err.message || "Unknown error"}`,
+    };
+  }
+}
+
+/**
+ * Check if the authenticated user is following specific user IDs
+ * @param credentialId - The credential ID to use
+ * @param targetUserIds - Array of user IDs to check
+ */
+export async function batchCheckFollowing(
+  credentialId: number,
+  targetUserIds: string[]
+): Promise<{
+  followingMap: { [userId: string]: boolean };
+  error?: string;
+}> {
+  try {
+    const { client, credentials } = await getXConsumerKeysClient(credentialId);
+    if (!client || !credentials) {
+      return {
+        followingMap: {},
+        error: "Could not create X client with provided credentials.",
+      };
+    }
+
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/batchCheckFollowing]"],
+    });
+
+    // Get authenticated user's ID first
+    const me = await retryWithBackoff(() => client.me(), {
+      retries: 2,
+      baseDelayMs: 500,
+      maxWaitMs: 15000,
+    });
+
+    if (!me?.data?.id) {
+      return {
+        followingMap: {},
+        error: "Could not get authenticated user ID",
+      };
+    }
+
+    const myUserId = me.data.id;
+
+    // Get user's following list (up to 1000 - X API limit)
+    const following = await retryWithBackoff(
+      () =>
+        client.following(myUserId, {
+          max_results: 1000,
+          "user.fields": ["id"],
+        }),
+      { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
+    );
+
+    const followingIds = new Set(
+      (following.data || []).map((user: any) => user.id)
+    );
+
+    log.info("Checked following status", {
+      totalFollowing: followingIds.size,
+      checking: targetUserIds.length,
+    });
+
+    // Build result map
+    const followingMap: { [userId: string]: boolean } = {};
+    targetUserIds.forEach((userId) => {
+      followingMap[userId] = followingIds.has(userId);
+    });
+
+    return { followingMap };
+  } catch (err: any) {
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/batchCheckFollowing]"],
+    });
+    log.error("Failed to check following status", { error: serializeError(err) });
+    return {
+      followingMap: {},
+      error: `Failed to check following: ${err.message || "Unknown error"}`,
+    };
+  }
+}
+
+/**
+ * Reply to a tweet
+ * @param credentialId - The credential ID to use
+ * @param tweetId - The tweet ID to reply to
+ * @param text - The reply text (max 280 characters)
+ */
+export async function replyToTweet(
+  credentialId: number,
+  tweetId: string,
+  text: string
+): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+  try {
+    const { client, credentials, userId } = await getXConsumerKeysClient(credentialId);
+    if (!client || !credentials) {
+      return {
+        success: false,
+        error: "Could not create X client with provided credentials.",
+      };
+    }
+
+    // Check if we have user access tokens for posting
+    if (
+      !credentials.accessToken ||
+      !credentials.accessSecret ||
+      credentials.accessToken.trim() === "" ||
+      credentials.accessSecret.trim() === ""
+    ) {
+      return {
+        success: false,
+        error: "Access tokens are required for replying. Please provide both access token and access token secret.",
+      };
+    }
+
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/replyToTweet]"],
+    });
+
+    log.info("Attempting to reply to tweet", {
+      tweetId: tweetId.trim(),
+      textLength: text.length,
+      textPreview: text.substring(0, 50),
+      userId,
+    });
+
+    // Validate tweet ID format
+    if (!tweetId || typeof tweetId !== 'string' || tweetId.trim() === '') {
+      log.error("Invalid tweet ID", { tweetId });
+      return {
+        success: false,
+        error: "Invalid tweet ID: must be a non-empty string",
+      };
+    }
+
+    // Validate and sanitize text
+    const sanitizedText = text?.trim() || '';
+    if (sanitizedText === '') {
+      log.error("Empty reply text", { originalText: text });
+      return {
+        success: false,
+        error: "Reply text cannot be empty",
+      };
+    }
+
+    if (sanitizedText.length > 280) {
+      log.error("Reply text too long", { length: sanitizedText.length });
+      return {
+        success: false,
+        error: `Reply text too long: ${sanitizedText.length} characters (max 280)`,
+      };
+    }
+
+    log.info("Attempting to post reply with retry logic", {
+      tweetId: tweetId.trim(),
+      textLength: sanitizedText.length,
+      textPreview: sanitizedText.substring(0, 50),
+      userId,
+    });
+
+    // Post the reply with retry logic
+    // The client is already a v2 write client
+    // Use tweet() with reply payload instead of reply() to have more control
+    // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs on cron jobs)
+    const reply = await retryWithBackoff(
+      () => client.tweet(sanitizedText, {
+        reply: {
+          in_reply_to_tweet_id: tweetId.trim()
+        }
+      }),
+      { retries: 3, baseDelayMs: 1000, userId: userId || undefined, maxWaitMs: 30000 }
+    );
+
+    log.info("Reply posted successfully", { replyId: reply?.data?.id, userId });
+
+    return {
+      success: true,
+      tweetId: reply?.data?.id,
+    };
+  } catch (err: any) {
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/replyToTweet]"],
+    });
+
+    // Handle 403 errors with detailed classification
+    if (err.code === 403 || err?.response?.status === 403) {
+      const errorClassification = classifyTwitter403Error(err);
+      log.error("403 Error replying to tweet", {
+        type: errorClassification.type,
+        message: errorClassification.message,
+        solution: errorClassification.solution,
+      });
+      return {
+        success: false,
+        error: `${errorClassification.message}: ${errorClassification.solution}`,
+      };
+    }
+
+    // Handle 400 errors with more detail
+    if (err.code === 400 || err?.response?.status === 400) {
+      log.error("400 Error replying to tweet", {
+        error: serializeError(err),
+        tweetId,
+        textLength: text?.length
+      });
+      return {
+        success: false,
+        error: `Invalid request: ${err.message || "One or more parameters invalid"}. Check that the tweet ID is valid and the text meets Twitter requirements.`,
+      };
+    }
+
+    log.error("Failed to reply to tweet", { error: serializeError(err) });
+    return {
+      success: false,
+      error: `Failed to reply: ${err.message || "Unknown error"}`,
+    };
+  }
+}
+
+/**
+ * Get authenticated user's X user ID
+ * @param credentialId - The credential ID to use
+ */
+export async function getAuthenticatedUserId(
+  credentialId: number
+): Promise<{ userId?: string; error?: string }> {
+  try {
+    const { client, credentials } = await getXConsumerKeysClient(credentialId);
+    if (!client || !credentials) {
+      return { error: "Could not create X client with provided credentials." };
+    }
+
+    const me = await retryWithBackoff(() => client.me(), {
+      retries: 2,
+      baseDelayMs: 500,
+      maxWaitMs: 15000,
+    });
+
+    if (!me?.data?.id) {
+      return { error: "Could not get authenticated user ID" };
+    }
+
+    return { userId: me.data.id };
+  } catch (err: any) {
+    const log = logger.getChildLogger({
+      prefix: ["[xconsumerkeys/twitterManager/getAuthenticatedUserId]"],
+    });
+    log.error("Failed to get user ID", { error: serializeError(err) });
+    return { error: `Failed to get user ID: ${err.message || "Unknown error"}` };
+  }
+}
+

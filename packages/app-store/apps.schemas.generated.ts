@@ -7,8 +7,6 @@ import { appDataSchema as googlecloudstorage_zod_ts } from "./googlecloudstorage
 import { appDataSchema as instagramsocial_zod_ts } from "./instagramsocial/zod";
 import { appDataSchema as linkedinsocial_zod_ts } from "./linkedinsocial/zod";
 import { appDataSchema as threadssocial_zod_ts } from "./threadssocial/zod";
-import { appDataSchema as twitterv1social_zod_ts } from "./twitterv1social/zod";
-import { appDataSchema as xsocial_zod_ts } from "./xsocial/zod";
 
 export const appDataSchemas = {
   facebooksocial: facebooksocial_zod_ts,
@@ -16,6 +14,4 @@ export const appDataSchemas = {
   instagramsocial: instagramsocial_zod_ts,
   linkedinsocial: linkedinsocial_zod_ts,
   threadssocial: threadssocial_zod_ts,
-  twitterv1social: twitterv1social_zod_ts,
-  xsocial: xsocial_zod_ts,
 };

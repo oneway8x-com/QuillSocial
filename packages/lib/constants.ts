@@ -101,7 +101,7 @@ export const LINKEDIN_SCOPES =
 
 export const TIKTOK_CLIENT_ID = process.env.TIKTOK_CLIENT_ID;
 export const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
-export const TWITTER_APP_ID = "linkedin-social";
+export const TWITTER_APP_ID = "xconsumerkeys-social";
 export const IS_SELF_HOSTED = !(
   new URL(WEBAPP_URL).hostname.endsWith(".app.quillsocial.com") ||
   new URL(WEBAPP_URL).hostname.endsWith(".quillsocial.com")

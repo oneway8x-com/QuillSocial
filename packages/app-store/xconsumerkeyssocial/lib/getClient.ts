@@ -55,7 +55,7 @@ export const getXConsumerKeysClient = async (credentialId: number) => {
     // console.log("Logged in as:", me);
     // await clientApi.readWrite.v2.tweet("Hello from v2 🚀");
 
-    return { client, credentials: parsedCredential };
+    return { client, credentials: parsedCredential, userId: credential.userId };
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error("Credential validation failed:", error.errors);
