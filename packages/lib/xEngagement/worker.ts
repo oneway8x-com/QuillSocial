@@ -8,6 +8,7 @@ import prisma from "@quillsocial/prisma";
 import * as twitterManager from "@quillsocial/app-store/xconsumerkeyssocial/lib/twitterManager";
 import { PubSub, Message } from "@google-cloud/pubsub";
 import logger from "@quillsocial/lib/logger";
+import { createTwitterRateLimitNotification, createTwitterErrorNotification } from "@quillsocial/lib/notification-helper";
 
 const log = logger.getChildLogger({ prefix: ["[xEngagement/worker]"] });
 
@@ -149,7 +150,23 @@ export async function processXEngagementJobs(): Promise<ProcessResult> {
             error: replyResult.error,
             success: replyResult.success,
           });
-          throw new Error(replyResult.error || "Failed to post reply");
+
+          // Create notification for the error
+          const errorMessage = replyResult.error || "Failed to post reply";
+
+          // Check if it's a rate limit error (429)
+          if (errorMessage.includes("429") || errorMessage.toLowerCase().includes("rate limit")) {
+            await createTwitterRateLimitNotification(job.userId, {
+              code: 429,
+              message: errorMessage,
+            });
+          } else {
+            await createTwitterErrorNotification(job.userId, {
+              message: errorMessage,
+            }, "posting reply");
+          }
+
+          throw new Error(errorMessage);
         }
 
         log.info(`Successfully posted reply for job ${job.id}`, {
@@ -198,6 +215,14 @@ export async function processXEngagementJobs(): Promise<ProcessResult> {
           stack: error.stack,
           attempt: job.attempt,
         });
+
+        // Create notification for the error
+        const errorCode = error?.code || error?.statusCode;
+        if (errorCode === 429 || error.message?.includes("429") || error.message?.toLowerCase().includes("rate limit")) {
+          await createTwitterRateLimitNotification(job.userId, error);
+        } else {
+          await createTwitterErrorNotification(job.userId, error, "X engagement job");
+        }
 
         // Increment attempt
         const nextAttempt = job.attempt + 1;

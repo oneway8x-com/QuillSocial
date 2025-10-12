@@ -110,13 +110,22 @@ export function classifyTwitter403Error(error: any): {
  * Retry a function that may throw HTTP errors (from twitter-api-v2).
  * On 429 responses, it will respect `Retry-After` (seconds) or `x-rate-limit-reset` headers when available.
  * Falls back to exponential backoff with jitter.
+ *
+ * IMPORTANT: For cron jobs, set maxWaitMs to prevent long hangs (e.g., 30000 = 30 seconds)
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  opts: { retries?: number; baseDelayMs?: number } = {}
+  opts: {
+    retries?: number;
+    baseDelayMs?: number;
+    userId?: number;
+    maxWaitMs?: number; // Maximum wait time between retries (prevents 7+ minute waits)
+  } = {}
 ): Promise<T> {
-  const retries = opts.retries ?? 4;
+  const retries = opts.retries ?? 3; // Reduced from 4 to 3 for faster failures
   const base = opts.baseDelayMs ?? 500; // 500ms
+  const userId = opts.userId;
+  const maxWaitMs = opts.maxWaitMs ?? 60000; // Default max 60 seconds (was unlimited before)
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -160,13 +169,39 @@ export async function retryWithBackoff<T>(
         waitMs = exp + jitter;
       }
 
+      // Cap the wait time to maxWaitMs to prevent extremely long waits
+      const originalWaitMs = waitMs;
+      waitMs = Math.min(waitMs, maxWaitMs);
+      const wasCapped = originalWaitMs > maxWaitMs;
+
       const log = logger.getChildLogger({ prefix: ["[xconsumerkeys/twitterManager/retry]"] });
-      log.warn(`Rate limited (429). Retrying attempt=${attempt + 1}/${retries} after ${waitMs}ms`, {
+      log.warn(`Rate limited (429). Retrying attempt=${attempt + 1}/${retries} after ${waitMs}ms${wasCapped ? ` (capped from ${originalWaitMs}ms)` : ''}`, {
         attempt,
         retries,
         waitMs,
+        originalWaitMs: wasCapped ? originalWaitMs : undefined,
+        capped: wasCapped,
         error: serializeError(err),
+        userId,
       });
+
+      // Create notification for rate limit if userId is provided
+      // Only notify on first rate limit attempt to avoid spam
+      if (userId && attempt === 0) {
+        log.info("Creating rate limit notification for user", { userId });
+        const { createTwitterRateLimitNotification } = await import("@quillsocial/lib/notification-helper");
+        await createTwitterRateLimitNotification(userId, {
+          code: 429,
+          message: wasCapped
+            ? `Rate limited during API request. Will retry after ${Math.ceil(waitMs / 1000)} seconds (Twitter requested ${Math.ceil(originalWaitMs / 1000)}s but capped for performance).`
+            : `Rate limited during API request. Retrying after ${Math.ceil(waitMs / 1000)} seconds.`,
+        }).catch((notifError) => {
+          log.error("Failed to create rate limit notification", {
+            error: notifError.message,
+            userId,
+          });
+        });
+      }
 
       await sleep(waitMs);
       // continue loop to retry
@@ -234,9 +269,11 @@ export async function searchXCommunityIdByName(
     }
 
     // Use retry wrapper to handle rate limits (429) more gracefully.
+    // maxWaitMs: 30000 = 30 seconds max wait for community search
     const communities = await retryWithBackoff(() => client.searchCommunities(name), {
-      retries: 4,
+      retries: 3,
       baseDelayMs: 500,
+      maxWaitMs: 30000,
     });
 
     // Try to handle multiple possible response shapes from the client.
@@ -392,20 +429,22 @@ export const post = async (
       if (twitterPost.xcommunity && twitterPost.xcommunity.trim() !== "") {
         log.info("Posting to community", { communityId: twitterPost.xcommunity });
         // Post to community with retry logic
+        // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs)
         tweet = await retryWithBackoff(
           () => client.tweet(tweetText, {
             community_id: twitterPost.xcommunity!
           }),
-          { retries: 3, baseDelayMs: 1000 }
+          { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
         );
         log.info("Tweet posted successfully to community", {
           communityId: twitterPost.xcommunity
         });
       } else {
         // Post regular tweet with retry logic
+        // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs)
         tweet = await retryWithBackoff(
           () => client.tweet(tweetText),
-          { retries: 3, baseDelayMs: 1000 }
+          { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
         );
         log.info("Tweet posted successfully (no community)");
       }
@@ -612,6 +651,7 @@ export async function searchHashtags(
     log.info("Searching tweets", { query, max: options.max });
 
     // Search tweets with retry logic
+    // maxWaitMs: 30000 = 30 seconds max wait for search
     const searchResult = await retryWithBackoff(
       () =>
         client.search(query, {
@@ -621,7 +661,7 @@ export async function searchHashtags(
           expansions: ["author_id"],
           next_token: options.nextToken,
         }),
-      { retries: 3, baseDelayMs: 1000 }
+      { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
     );
 
     const posts: Array<{
@@ -706,6 +746,7 @@ export async function batchCheckFollowing(
     const me = await retryWithBackoff(() => client.me(), {
       retries: 2,
       baseDelayMs: 500,
+      maxWaitMs: 15000,
     });
 
     if (!me?.data?.id) {
@@ -724,7 +765,7 @@ export async function batchCheckFollowing(
           max_results: 1000,
           "user.fields": ["id"],
         }),
-      { retries: 3, baseDelayMs: 1000 }
+      { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
     );
 
     const followingIds = new Set(
@@ -767,7 +808,7 @@ export async function replyToTweet(
   text: string
 ): Promise<{ success: boolean; tweetId?: string; error?: string }> {
   try {
-    const { client, credentials } = await getXConsumerKeysClient(credentialId);
+    const { client, credentials, userId } = await getXConsumerKeysClient(credentialId);
     if (!client || !credentials) {
       return {
         success: false,
@@ -790,6 +831,13 @@ export async function replyToTweet(
 
     const log = logger.getChildLogger({
       prefix: ["[xconsumerkeys/twitterManager/replyToTweet]"],
+    });
+
+    log.info("Attempting to reply to tweet", {
+      tweetId: tweetId.trim(),
+      textLength: text.length,
+      textPreview: text.substring(0, 50),
+      userId,
     });
 
     // Validate tweet ID format
@@ -819,25 +867,27 @@ export async function replyToTweet(
       };
     }
 
-    log.info("Attempting to reply to tweet", {
+    log.info("Attempting to post reply with retry logic", {
       tweetId: tweetId.trim(),
       textLength: sanitizedText.length,
-      textPreview: sanitizedText.substring(0, 50)
+      textPreview: sanitizedText.substring(0, 50),
+      userId,
     });
 
     // Post the reply with retry logic
     // The client is already a v2 write client
     // Use tweet() with reply payload instead of reply() to have more control
+    // maxWaitMs: 30000 = 30 seconds max wait (prevents 7+ minute hangs on cron jobs)
     const reply = await retryWithBackoff(
       () => client.tweet(sanitizedText, {
         reply: {
           in_reply_to_tweet_id: tweetId.trim()
         }
       }),
-      { retries: 3, baseDelayMs: 1000 }
+      { retries: 3, baseDelayMs: 1000, userId: userId || undefined, maxWaitMs: 30000 }
     );
 
-    log.info("Reply posted successfully", { replyId: reply?.data?.id });
+    log.info("Reply posted successfully", { replyId: reply?.data?.id, userId });
 
     return {
       success: true,
@@ -899,6 +949,7 @@ export async function getAuthenticatedUserId(
     const me = await retryWithBackoff(() => client.me(), {
       retries: 2,
       baseDelayMs: 500,
+      maxWaitMs: 15000,
     });
 
     if (!me?.data?.id) {

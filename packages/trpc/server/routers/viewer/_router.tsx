@@ -5,6 +5,7 @@ import { appsRouter } from "./apps/_router";
 import { authRouter } from "./auth/_router";
 import { billingsRouter } from "./billings/_router";
 import { googleWorkspaceRouter } from "./googleWorkspace/_router";
+import { notificationsRouter } from "./notifications/_router";
 import { openaiUsageRouter } from "./openaiUsage";
 import { viewerOrganizationsRouter } from "./organizations/_router";
 import { socialsRouter } from "./socials/_router";
@@ -25,5 +26,6 @@ export const viewerRouter = mergeRouters(
     socials: socialsRouter,
     openaiUsage: openaiUsageRouter,
     xConnect: xConnectRouter,
+    notifications: notificationsRouter,
   })
 );

@@ -3,7 +3,6 @@ import { defaultResponder } from "@quillsocial/lib/server";
 import prisma from "@quillsocial/prisma";
 import { Prisma } from "@quillsocial/prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { string } from "zod";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") {
@@ -14,23 +13,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
     const { query } = req;
     const { credentialId, pageId } = query;
-    let numCredentialId = 0;
+
+    // Parse credentialId safely - only include it if valid
+    let numCredentialId: number | undefined;
     if (typeof credentialId === "string") {
-      numCredentialId = parseInt(credentialId, 10);
+      const parsed = parseInt(credentialId, 10);
+      if (!isNaN(parsed)) {
+        numCredentialId = parsed;
+      }
     }
 
-    const where: Prisma.PostWhereInput = pageId
-      ? {
-          userId: session?.user?.id,
-          credentialId: numCredentialId,
-          status: "NEW",
-          pageId: pageId as string,
-        }
-      : {
-          userId: session?.user?.id,
-          credentialId: numCredentialId,
-          status: "NEW",
-        };
+    const where: Prisma.PostWhereInput = {
+      userId: session?.user?.id,
+      status: "NEW",
+      ...(numCredentialId !== undefined && { credentialId: numCredentialId }),
+      ...(pageId && { pageId: pageId as string }),
+    };
 
     const posts = await prisma.post.findMany({
       where,

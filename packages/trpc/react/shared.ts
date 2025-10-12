@@ -29,4 +29,5 @@ export const ENDPOINTS = [
   "socials",
   "openaiUsage",
   "xConnect",
+  "notifications",
 ] as const;

@@ -137,6 +137,7 @@ model User {
   openAIUsages         OpenAIUsage[]
   instagramAccounts    InstagramAccount[]
   xConnectSetting      XConnectSetting?
+  notifications        Notification[]
 
   @@unique([email])
   @@unique([email, username])
@@ -831,4 +832,27 @@ model XUsageCounter {
 
   @@unique([userId])
   @@index([userId])
+}
+
+enum NotificationType {
+  ERROR
+  WARNING
+  INFO
+  SUCCESS
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(ERROR)
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }
