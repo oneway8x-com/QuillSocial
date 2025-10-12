@@ -1,6 +1,4 @@
-import { LinkedinManager } from "@quillsocial/app-store/linkedinsocial/lib";
-import { post } from "@quillsocial/app-store/xconsumerkeyssocial/lib";
-import { TWITTER_APP_ID } from "@quillsocial/lib/constants";
+import { executePost, hasPostHandler, getSupportedPostApps } from "@quillsocial/app-store/postRegistry";
 import prisma from "@quillsocial/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -9,21 +7,24 @@ export default async function handler(
   res: NextApiResponse
 ) {
   console.log("---------------");
-  console.log("schedule job");
+  console.log("[Post Cron] Schedule job started");
   console.log("---------------");
   const apiKey = req.headers.authorization || req.query.apiKey;
-  console.log(apiKey);
+
   if (process.env.CRON_API_KEY !== apiKey) {
+    console.warn("[Post Cron] Authentication failed");
     res.status(401).json({ message: "Not authenticated" });
     return;
   }
+
   if (req.method !== "POST") {
     res.status(405).json({ message: "Invalid method" });
     return;
   }
+
   // Ensure we compare schedule times against an explicit UTC 'now'
   const nowUtc = new Date(new Date().toISOString());
-  console.log("Cron UTC now:", nowUtc.toISOString());
+  console.log("[Post Cron] UTC now:", nowUtc.toISOString());
 
   const posts = await prisma.post.findMany({
     where: {
@@ -48,20 +49,53 @@ export default async function handler(
       },
     },
   });
-  console.log(`Found ${posts.length} posts to update `, posts);
-  if (posts.length > 0) {
-    await Promise.all(
-      posts.map((p) => {
-        if (p.credential?.appId === "linkedin-social") {
-          return LinkedinManager.post(p.id);
-        } else if (p.credential?.appId === "xconsumerkeys-social") {
-          return post(p.id);
-        }
-        return;
-      })
-    );
-  } else {
-    console.log("No data to update");
+
+  console.log(`[Post Cron] Found ${posts.length} posts to publish:`,
+    posts.map(p => ({ id: p.id, appId: p.credential?.appId }))
+  );
+
+  if (posts.length === 0) {
+    console.log("[Post Cron] No posts to update");
+    res.status(200).json({ processed: 0, results: [] });
+    return;
   }
-  res.status(200).json(posts.length);
+
+  // Process posts with individual error handling
+  const results = await Promise.allSettled(
+    posts.map(async (p) => {
+      const appId = p.credential?.appId;
+      console.log(`[Post Cron] Processing post ${p.id} for ${appId}`);
+
+      try {
+        if (!appId) {
+          throw new Error("Missing app ID");
+        }
+
+        if (!hasPostHandler(appId)) {
+          throw new Error(
+            `Unsupported app: ${appId}. Supported apps: ${getSupportedPostApps().join(", ")}`
+          );
+        }
+
+        const result = await executePost(appId, p.id);
+
+        console.log(`[Post Cron] ✅ Successfully posted ${p.id} to ${appId}`);
+        return { postId: p.id, appId, status: "success", result };
+      } catch (error: any) {
+        console.error(`[Post Cron] ❌ Failed to post ${p.id} to ${appId}:`, error.message);
+        return { postId: p.id, appId, status: "error", error: error.message };
+      }
+    })
+  );
+
+  // Summarize results
+  const summary = {
+    total: posts.length,
+    successful: results.filter(r => r.status === "fulfilled" && r.value.status === "success").length,
+    failed: results.filter(r => r.status === "rejected" || (r.status === "fulfilled" && r.value.status === "error")).length,
+    results: results.map(r => r.status === "fulfilled" ? r.value : { status: "error", error: "Promise rejected" })
+  };
+
+  console.log("[Post Cron] Summary:", summary);
+  res.status(200).json(summary);
 }

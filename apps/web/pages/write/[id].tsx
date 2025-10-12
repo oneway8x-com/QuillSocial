@@ -342,12 +342,14 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
                     /* handled in hook */
                   }}
                   onUpdate={handleUpdateFromScheduleDialog}
+                  appId={appId}
                 />
 
                 <PostNowDialog
                   open={isModalPostNow}
                   onClose={() => setIsModalPostNow(false)}
                   onUpdate={handlePostNow}
+                  appId={appId}
                 />
 
                 <AddImageDialog

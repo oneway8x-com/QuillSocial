@@ -1,6 +1,7 @@
 import PluginComment from "./PluginComment";
 import ModalUpgrade from "@quillsocial/features/payments/ModalUpgrade";
 import { checkUserToUsePlug } from "@quillsocial/features/shell/SocialAvatar";
+import { TWITTER_APP_ID } from "@quillsocial/lib/constants";
 import { BillingType } from "@quillsocial/prisma/enums";
 import { trpc } from "@quillsocial/trpc/react";
 import {
@@ -28,6 +29,7 @@ interface ScheduleDialogProps {
   onClose: () => void;
   onDateTimeChange: (value: string) => void;
   onUpdate: (pluginData?: PluginType) => void;
+  appId?: string;
 }
 
 export const ScheduleDialog: React.FC<ScheduleDialogProps> = ({
@@ -35,6 +37,7 @@ export const ScheduleDialog: React.FC<ScheduleDialogProps> = ({
   onClose,
   onDateTimeChange,
   onUpdate,
+  appId,
 }) => {
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDisabledButton, setIsDisabledButton] = useState(false);
@@ -55,6 +58,9 @@ export const ScheduleDialog: React.FC<ScheduleDialogProps> = ({
   //   getCountSocial.data,
   //   currentBillingQuery.data?.type ?? BillingType.FREE_TIER
   // );
+
+  // Check if plugin comments are supported for this app
+  const isPluginCommentSupported = appId === TWITTER_APP_ID;
 
   const handleDialogClose = () => {
     if (onClose) {
@@ -150,7 +156,7 @@ export const ScheduleDialog: React.FC<ScheduleDialogProps> = ({
                 onChange={handleDateTimeChange}
               />
             </div>
-            {checkPlug && (
+            {checkPlug && isPluginCommentSupported && (
               <div className="mt-2 flex">
                 <Switch
                   checked={isChecked}
