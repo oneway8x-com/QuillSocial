@@ -13,6 +13,10 @@ export interface UseTawkToOptions extends Partial<TawkToConfig> {
   onChatStarted?: () => void;
   /** Callback when chat ends */
   onChatEnded?: () => void;
+  /** Callback when visitor sends a message */
+  onChatMessageVisitor?: (message: string, visitorInfo: TawkToVisitor | null) => void;
+  /** Callback when pre-chat form is submitted */
+  onPrechatSubmit?: (data: any) => void;
   /** Enable debug logging */
   debug?: boolean;
 }
@@ -26,6 +30,8 @@ export interface UseTawkToReturn {
   isChatOngoing: boolean;
   /** Whether the widget is visible */
   isVisible: boolean;
+  /** Current visitor information */
+  visitorInfo: TawkToVisitor | null;
   /** Load Tawk.to widget manually */
   load: () => void;
   /** Show the widget */
@@ -61,6 +67,8 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     onStatusChange,
     onChatStarted,
     onChatEnded,
+    onChatMessageVisitor,
+    onPrechatSubmit,
     debug = false,
     ...configOptions
   } = options;
@@ -69,6 +77,7 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
   const [status, setStatus] = useState<TawkToStatus | null>(null);
   const [isChatOngoing, setIsChatOngoing] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [visitorInfo, setVisitorInfo] = useState<TawkToVisitor | null>(null);
 
   const scriptLoadedRef = useRef(false);
   const configRef = useRef<TawkToConfig | null>(null);
@@ -92,16 +101,29 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
 
   // Setup Tawk.to API and callbacks
   const setupTawkToAPI = useCallback(() => {
-    if (typeof window === 'undefined' || !window.Tawk_API) return;
+    if (typeof window === 'undefined' || !window.Tawk_API) {
+      console.warn('⚠️ [TawkTo] Cannot setup API - window or Tawk_API not available');
+      return;
+    }
 
     const api = window.Tawk_API;
     log('Setting up Tawk.to API callbacks');
 
+    console.log('🔍 [TawkTo] Current Tawk_API state before setup:', {
+      hasOnLoad: !!api.onLoad,
+      hasOnStatusChange: !!api.onStatusChange,
+      hasOnChatStarted: !!api.onChatStarted,
+      currentStatus: api.getStatus?.(),
+    });
+
     // Setup callbacks
+    const originalOnLoad = api.onLoad;
     api.onLoad = () => {
+      console.log('🎉 [TawkTo] onLoad callback fired!');
       log('Widget loaded');
       setIsLoaded(true);
       onLoad?.();
+      originalOnLoad?.();
     };
 
     api.onStatusChange = (newStatus: TawkToStatus) => {
@@ -136,7 +158,69 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
       setIsVisible(false);
     };
 
-  }, [onLoad, onStatusChange, onChatStarted, onChatEnded, log]);
+    // Extract visitor info from pre-chat form submission
+    api.onPrechatSubmit = (data: any) => {
+      log('Pre-chat form submitted:', data);
+
+      const extractedVisitorInfo: TawkToVisitor = {
+        name: data.name || data.fullName || undefined,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        ...data
+      };
+
+      setVisitorInfo(extractedVisitorInfo);
+      onPrechatSubmit?.(data);
+    };
+
+    // Monitor visitor name changes
+    api.onVisitorNameChanged = (visitorName: string) => {
+      log('Visitor name changed:', visitorName);
+      setVisitorInfo(prev => ({
+        ...prev,
+        name: visitorName
+      }));
+    };
+
+    // Extract visitor info when they send messages
+    api.onChatMessageVisitor = (message: string) => {
+      log('Visitor message received:', message);
+
+      // Try to get visitor info from Tawk API's visitor object
+      let currentVisitor = api.visitor ? { ...api.visitor } : { ...visitorInfo };
+
+      log('Current visitor data from API:', currentVisitor);
+
+      // Extract email from message if not already available
+      if (!currentVisitor?.email) {
+        const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) {
+          currentVisitor = {
+            ...currentVisitor,
+            email: emailMatch[0]
+          };
+
+          // Update visitor attributes in Tawk.to
+          api.setAttributes?.({ email: emailMatch[0] }, (error) => {
+            if (error) {
+              log('Error setting extracted email:', error);
+            } else {
+              log('Successfully set extracted email:', emailMatch[0]);
+            }
+          });
+        }
+      }
+
+      // Update state with visitor info
+      if (currentVisitor?.email || currentVisitor?.name) {
+        setVisitorInfo(currentVisitor);
+      }
+
+      // Always call the callback with the message and whatever visitor info we have
+      onChatMessageVisitor?.(message, currentVisitor);
+    };
+
+  }, [onLoad, onStatusChange, onChatStarted, onChatEnded, onChatMessageVisitor, onPrechatSubmit, visitorInfo, log]);
 
   // Load Tawk.to script
   const loadScript = useCallback(() => {
@@ -147,17 +231,31 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     const config = configRef.current;
     log('Loading Tawk.to script', config);
 
-    // Initialize Tawk_API
+    // Log visitor data being set
+    if (config.visitor) {
+      console.log('🔵 [TawkTo] Setting visitor data BEFORE script load:', {
+        name: config.visitor.name,
+        email: config.visitor.email,
+        phone: config.visitor.phone,
+        fullVisitorObject: config.visitor
+      });
+    }
+
+    // Initialize Tawk_API before loading script
     window.Tawk_API = window.Tawk_API || ({} as TawkToAPI);
     window.Tawk_LoadStart = new Date();
 
     // Set configuration
     if (config.autoStart === false && window.Tawk_API) {
       window.Tawk_API.autoStart = false;
+      log('Auto-start disabled');
     }
 
     if (config.visitor && window.Tawk_API) {
       window.Tawk_API.visitor = config.visitor;
+      console.log('✅ [TawkTo] Visitor data set on Tawk_API.visitor:', window.Tawk_API.visitor);
+    } else if (!config.visitor) {
+      console.log('⚠️ [TawkTo] No visitor data provided in config');
     }
 
     if (config.zIndex && window.Tawk_API) {
@@ -166,7 +264,7 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
       };
     }
 
-    // Setup API callbacks
+    // Setup API callbacks BEFORE script loads
     setupTawkToAPI();
 
     // Load the script
@@ -179,6 +277,26 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     script.onload = () => {
       log('Script loaded successfully');
       scriptLoadedRef.current = true;
+
+      // Re-setup callbacks after script loads to ensure they're attached
+      setTimeout(() => {
+        setupTawkToAPI();
+
+        // Check if widget actually loaded after a delay
+        setTimeout(() => {
+          if (!isLoaded && window.Tawk_API) {
+            console.warn('⚠️ [TawkTo] Script loaded but onLoad callback never fired. Manually setting loaded state.');
+            console.log('🔍 [TawkTo] Tawk_API state:', {
+              exists: !!window.Tawk_API,
+              status: window.Tawk_API?.getStatus?.(),
+              hasOnLoad: !!window.Tawk_API?.onLoad
+            });
+            // Manually trigger loaded state if widget exists
+            setIsLoaded(true);
+            onLoad?.();
+          }
+        }, 2000); // Wait 2 seconds to see if onLoad fires
+      }, 100);
     };
 
     script.onerror = () => {
@@ -234,9 +352,27 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
   }, [log]);
 
   const setVisitorAttributes = useCallback((attributes: TawkToVisitor, callback?: (error?: any) => void) => {
+    console.log('🔵 [TawkTo] setVisitorAttributes called with:', {
+      name: attributes.name,
+      email: attributes.email,
+      phone: attributes.phone,
+      allAttributes: attributes,
+      tawkAPIExists: !!window.Tawk_API,
+      setAttributesExists: !!(window.Tawk_API?.setAttributes)
+    });
+
     if (window.Tawk_API) {
-      window.Tawk_API.setAttributes(attributes, callback);
+      window.Tawk_API.setAttributes(attributes, (error) => {
+        if (error) {
+          console.error('❌ [TawkTo] Error setting visitor attributes:', error);
+        } else {
+          console.log('✅ [TawkTo] Visitor attributes set successfully:', attributes);
+        }
+        callback?.(error);
+      });
       log('Visitor attributes set', attributes);
+    } else {
+      console.error('❌ [TawkTo] Cannot set attributes - Tawk_API not available');
     }
   }, [log]);
 
@@ -266,6 +402,7 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     status,
     isChatOngoing,
     isVisible,
+    visitorInfo,
     load: loadScript,
     show,
     hide,

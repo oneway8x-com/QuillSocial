@@ -1,19 +1,23 @@
 /**
  * Example integration of Tawk.to in QuillSocial
  * This demonstrates how to integrate the chat system with user authentication
+ * and automatic visitor info extraction
  */
 
-import { useEffect } from 'react';
-import { useTawkTo, TawkToChat } from '@quillsocial/lib/tawkto';
+import { useEffect, useState } from 'react';
+import { useTawkTo, TawkToChat, TawkToVisitor } from '@quillsocial/lib/tawkto';
 import { useSession } from 'next-auth/react';
 
-// Example 1: Using the hook in a component
+// Example 1: Using the hook with visitor info extraction
 export function ChatSupportButton() {
   const { data: session } = useSession();
+  const [extractedVisitor, setExtractedVisitor] = useState<TawkToVisitor | null>(null);
+
   const {
     isLoaded,
     show,
     hide,
+    visitorInfo,
     setVisitorAttributes,
     addEvent
   } = useTawkTo({
@@ -21,6 +25,25 @@ export function ChatSupportButton() {
     onChatStarted: () => {
       console.log('User started a chat session');
     },
+    onChatMessageVisitor: (message, extractedInfo) => {
+      console.log('Visitor sent message:', message);
+      if (extractedInfo) {
+        console.log('Extracted visitor info:', extractedInfo);
+        setExtractedVisitor(extractedInfo);
+
+        // Store visitor info in your database
+        saveVisitorInfoToDatabase(extractedInfo);
+      }
+    },
+    onPrechatSubmit: (data) => {
+      console.log('Pre-chat form submitted:', data);
+      // Store pre-chat form data
+      saveVisitorInfoToDatabase({
+        name: data.name || data.fullName,
+        email: data.email,
+        phone: data.phone,
+      });
+    }
   });
 
   // Set user information when logged in
@@ -43,6 +66,13 @@ export function ChatSupportButton() {
     }
   }, [isLoaded, session, setVisitorAttributes, addEvent]);
 
+  // Display extracted visitor info
+  useEffect(() => {
+    if (visitorInfo) {
+      console.log('Current visitor info from hook:', visitorInfo);
+    }
+  }, [visitorInfo]);
+
   // Don't show chat for free users (example business logic)
   const canUseChat = session?.user?.plan !== 'free';
 
@@ -51,17 +81,38 @@ export function ChatSupportButton() {
   }
 
   return (
-    <button
-      onClick={show}
-      disabled={!isLoaded}
-      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-    >
-      💬 Get Help
-    </button>
+    <div>
+      <button
+        onClick={show}
+        disabled={!isLoaded}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+      >
+        💬 Get Help
+      </button>
+      {extractedVisitor && (
+        <div className="mt-2 text-sm text-gray-600">
+          Chatting with: {extractedVisitor.name || extractedVisitor.email}
+        </div>
+      )}
+    </div>
   );
 }
 
-// Example 2: Using the component approach
+// Helper function to save visitor info (implement based on your needs)
+async function saveVisitorInfoToDatabase(visitorInfo: TawkToVisitor) {
+  // Example: Save to your database via API
+  try {
+    await fetch('/api/chat/visitor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(visitorInfo)
+    });
+  } catch (error) {
+    console.error('Failed to save visitor info:', error);
+  }
+}
+
+// Example 2: Using the component approach with visitor extraction
 export function ChatWidget() {
   const { data: session } = useSession();
 
@@ -87,6 +138,11 @@ export function ChatWidget() {
       debug={process.env.NODE_ENV === 'development'}
       // Don't auto-start for free users
       autoStart={session.user.plan !== 'free'}
+      // Callback when visitor info is extracted
+      onVisitorInfoExtracted={(visitorInfo) => {
+        console.log('Visitor info extracted in component:', visitorInfo);
+        saveVisitorInfoToDatabase(visitorInfo);
+      }}
     />
   );
 }
