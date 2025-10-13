@@ -141,6 +141,11 @@ export default function XConnectEngagement() {
   const posts = postsQuery.data?.posts || [];
   const stats = statsQuery.data;
 
+  // Get full post objects for selected IDs
+  const selectedPosts = useMemo(() => {
+    return posts.filter((post) => selectedPostIds.includes(post.xPostId));
+  }, [posts, selectedPostIds]);
+
   // Selection handlers
   const handleSelectAll = () => {
     setSelectedPostIds(posts.map((p) => p.xPostId));
@@ -333,17 +338,6 @@ export default function XConnectEngagement() {
                 Active {stats?.statusCounts && `(${stats.statusCounts.active})`}
               </Button>
               <Button
-                color={statusFilter === "QUEUED" ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => {
-                  setStatusFilter("QUEUED");
-                  setPage(1);
-                  setSelectedPostIds([]); // Clear selection for non-active posts
-                }}
-              >
-                Queued {stats?.statusCounts && `(${stats.statusCounts.queued})`}
-              </Button>
-              <Button
                 color={statusFilter === "ENGAGED" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => {
@@ -430,11 +424,13 @@ export default function XConnectEngagement() {
                 <PostCard
                   key={post.id}
                   post={post}
-                  isSelected={selectedPostIds.includes(post.xPostId)}
-                  onToggle={handleTogglePost}
                   onSkip={handleSkipPost}
                   template={bulkTemplate}
                   topics={activeTopics}
+                  onStatusChange={() => {
+                    postsQuery.refetch();
+                    statsQuery.refetch();
+                  }}
                 />
               ))}
             </div>
@@ -500,6 +496,7 @@ export default function XConnectEngagement() {
         open={engageModalOpen}
         onClose={() => setEngageModalOpen(false)}
         selectedPostIds={selectedPostIds}
+        selectedPosts={selectedPosts}
         template={bulkTemplate}
         topics={activeTopics}
         dailyMax={stats?.dailyMax || 20}
