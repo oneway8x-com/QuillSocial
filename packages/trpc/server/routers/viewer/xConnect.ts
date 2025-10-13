@@ -670,4 +670,23 @@ export const xConnectRouter = router({
       updated: updated.count,
     };
   }),
+
+  /**
+   * Check if user has X Consumer Keys credential
+   */
+  hasXCredential: authedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    const credential = await prisma.credential.findFirst({
+      where: {
+        userId,
+        appId: "xconsumerkeys-social",
+        invalid: false,
+      },
+    });
+
+    return {
+      hasCredential: !!credential,
+    };
+  }),
 });
