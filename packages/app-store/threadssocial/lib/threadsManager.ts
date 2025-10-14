@@ -167,6 +167,222 @@ export const post = async (postId: number) => {
   }
 };
 
+/**
+ * Search for public Threads media by keyword or topic tag
+ *
+ * @param credentialId - The credential ID for authentication
+ * @param options - Search options
+ * @returns Search results or null on error
+ */
+export const searchByKeyword = async (
+  credentialId: number,
+  options: {
+    query: string;
+    searchType?: "TOP" | "RECENT";
+    searchMode?: "KEYWORD" | "TAG";
+    mediaType?: "TEXT" | "IMAGE" | "VIDEO";
+    since?: number; // Unix timestamp
+    until?: number; // Unix timestamp
+    limit?: number; // Max 100, default 25
+    fields?: string[]; // Fields to return
+  }
+) => {
+  console.debug("[threadsManager] searchByKeyword() start", {
+    credentialId,
+    options,
+  });
+
+  // Fetch credential
+  const credential = await prisma.credential.findUnique({
+    where: { id: credentialId },
+  });
+
+  if (!credential) {
+    console.error("Error searching Threads: credential not found", {
+      credentialId,
+    });
+    return null;
+  }
+
+  // Parse the credential key to get access token
+  let accessToken: string | undefined;
+  try {
+    let rawKey: any = credential.key as any;
+
+    try {
+      rawKey = JSON.parse(rawKey);
+    } catch {
+      try {
+        accessToken = rawKey.access_token;
+      } catch (e) {
+        console.error("Error parsing Threads credential key", e, {
+          credentialId: credential.id,
+        });
+      }
+    }
+
+    console.debug("[threadsManager] credential parsing result", {
+      credentialId: credential.id,
+      accessTokenPresent: !!accessToken,
+    });
+  } catch (e) {
+    console.error("Error parsing Threads credential key", e, {
+      credentialId: credential.id,
+    });
+  }
+
+  if (!accessToken) {
+    console.error("Error searching Threads: accessToken is null", {
+      credentialId: credential.id,
+    });
+    return null;
+  }
+
+  try {
+    // Build query parameters
+    const params: Record<string, string> = {
+      q: options.query,
+      access_token: accessToken,
+    };
+
+    // Add optional parameters
+    if (options.searchType) {
+      params.search_type = options.searchType;
+    }
+
+    if (options.searchMode) {
+      params.search_mode = options.searchMode;
+    }
+
+    if (options.mediaType) {
+      params.media_type = options.mediaType;
+    }
+
+    if (options.since) {
+      params.since = options.since.toString();
+    }
+
+    if (options.until) {
+      params.until = options.until.toString();
+    }
+
+    if (options.limit) {
+      params.limit = Math.min(options.limit, 100).toString();
+    }
+
+    // Default fields if not provided
+    const fields = options.fields?.length
+      ? options.fields.join(",")
+      : "id,text,media_type,permalink,timestamp,username,has_replies,is_quote_post,is_reply";
+
+    params.fields = fields;
+
+    console.debug("[threadsManager] searching with params", { params });
+
+    // Make the API request
+    const { data } = await axios.get(`${GRAPH}/keyword_search`, { params });
+
+    console.debug("[threadsManager] search successful", {
+      resultCount: data?.data?.length || 0,
+    });
+
+    return data;
+  } catch (error: any) {
+    console.error(
+      "Error searching Threads:",
+      error.response?.data || error.message,
+      {
+        credentialId,
+        query: options.query,
+      }
+    );
+    return null;
+  }
+};
+
+/**
+ * Get recently searched keywords for the authenticated user
+ *
+ * @param credentialId - The credential ID for authentication
+ * @returns Recently searched keywords or null on error
+ */
+export const getRecentlySearchedKeywords = async (credentialId: number) => {
+  console.debug("[threadsManager] getRecentlySearchedKeywords() start", {
+    credentialId,
+  });
+
+  // Fetch credential
+  const credential = await prisma.credential.findUnique({
+    where: { id: credentialId },
+  });
+
+  if (!credential) {
+    console.error(
+      "Error fetching recently searched keywords: credential not found",
+      {
+        credentialId,
+      }
+    );
+    return null;
+  }
+
+  // Parse the credential key to get access token
+  let accessToken: string | undefined;
+  try {
+    let rawKey: any = credential.key as any;
+
+    try {
+      rawKey = JSON.parse(rawKey);
+    } catch {
+      try {
+        accessToken = rawKey.access_token;
+      } catch (e) {
+        console.error("Error parsing Threads credential key", e, {
+          credentialId: credential.id,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing Threads credential key", e, {
+      credentialId: credential.id,
+    });
+  }
+
+  if (!accessToken) {
+    console.error(
+      "Error fetching recently searched keywords: accessToken is null",
+      {
+        credentialId: credential.id,
+      }
+    );
+    return null;
+  }
+
+  try {
+    const { data } = await axios.get(`${GRAPH}/me`, {
+      params: {
+        fields: "recently_searched_keywords",
+        access_token: accessToken,
+      },
+    });
+
+    console.debug("[threadsManager] recently searched keywords retrieved", {
+      keywordCount: data?.recently_searched_keywords?.length || 0,
+    });
+
+    return data;
+  } catch (error: any) {
+    console.error(
+      "Error fetching recently searched keywords:",
+      error.response?.data || error.message,
+      {
+        credentialId,
+      }
+    );
+    return null;
+  }
+};
+
 // Poll a container until it is ready
 async function checkMediaLoaded(
   mediaContainerId: string,
