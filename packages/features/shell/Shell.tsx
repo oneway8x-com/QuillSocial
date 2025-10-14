@@ -649,6 +649,15 @@ const navigation: NavigationItemType[] = [
     isNeedAI: true,
   },
   {
+    name: "Post Factory",
+    href: "/post-factory",
+    icon: PenTool,
+    isCurrent: ({ router }) => {
+      const path = router.asPath.split("?")[0];
+      return path.startsWith("/post-factory");
+    },
+  },
+  {
     name: "My Content",
     href: "/my-content/all",
     icon: FileClock,
