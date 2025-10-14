@@ -11,6 +11,7 @@ import {
   Wand
 } from "@quillsocial/ui/components/icon";
 import { useLocale } from "@quillsocial/lib/hooks/useLocale";
+import { trpc } from "@quillsocial/trpc/react";
 
 interface Tab {
   id: string;
@@ -22,10 +23,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
   const router = useRouter();
 
   const [outline, setOutline] = useState("Hook, 3 lessons on pricing ladder, example, CTA to pricing checklist");
-  const [tone, setTone] = useState("authoritative");
+  const [tone, setTone] = useState<"friendly" | "authoritative" | "contrarian">("authoritative");
   const [activeTab, setActiveTab] = useState("linkedin");
   const [cta, setCta] = useState("Join the pricing checklist");
   const [utm, setUtm] = useState("?utm_source=li&utm_medium=post");
+  const [selectedPlatforms, setSelectedPlatforms] = useState<("linkedin" | "x" | "carousel" | "shorts" | "blog")[]>(["linkedin"]);
 
   const [outputs, setOutputs] = useState({
     linkedin: `Most founders raise prices wrong. Here's the ladder we use:
@@ -54,6 +56,41 @@ CTA (10s): Grab the free pricing checklist.`,
 **CTA:** ${cta}`,
   });
 
+  // tRPC mutations
+  const generateAllMutation = trpc.viewer.postFactory.generateAll.useMutation({
+    onSuccess: (data) => {
+      setOutputs(data.outputs);
+      showToast("Content generated successfully!", "success");
+    },
+    onError: (error) => {
+      showToast(`Error: ${error.message}`, "error");
+    },
+  });
+
+  const expandOutlineMutation = trpc.viewer.postFactory.expandOutline.useMutation({
+    onSuccess: (data) => {
+      setOutline(data.outline);
+      setTone(data.tone as "friendly" | "authoritative" | "contrarian");
+      showToast("Outline expanded successfully!", "success");
+    },
+    onError: (error) => {
+      showToast(`Error: ${error.message}`, "error");
+    },
+  });
+
+  const regenerateMutation = trpc.viewer.postFactory.regenerate.useMutation({
+    onSuccess: (data) => {
+      setOutputs((prev) => ({
+        ...prev,
+        [data.platform]: data.content,
+      }));
+      showToast(`${data.platform} content regenerated!`, "success");
+    },
+    onError: (error) => {
+      showToast(`Error: ${error.message}`, "error");
+    },
+  });
+
   const tabs: Tab[] = [
     { id: "linkedin", name: "LinkedIn" },
     { id: "x", name: "X Thread" },
@@ -62,9 +99,34 @@ CTA (10s): Grab the free pricing checklist.`,
     { id: "blog", name: "Blog" },
   ];
 
+  const togglePlatform = (platform: "linkedin" | "x" | "carousel" | "shorts" | "blog") => {
+    setSelectedPlatforms((prev) => {
+      if (prev.includes(platform)) {
+        return prev.filter((p) => p !== platform);
+      } else {
+        return [...prev, platform];
+      }
+    });
+  };
+
   const handleGenerateAll = () => {
-    // TODO: Integrate with AI generation
-    console.log("Generating content for all platforms...");
+    if (!outline.trim()) {
+      showToast("Please enter an outline", "error");
+      return;
+    }
+
+    if (selectedPlatforms.length === 0) {
+      showToast("Please select at least one platform", "error");
+      return;
+    }
+
+    generateAllMutation.mutate({
+      outline,
+      tone,
+      platforms: selectedPlatforms,
+      cta,
+      utm,
+    });
   };
 
   const handleSchedule = () => {
@@ -79,9 +141,17 @@ CTA (10s): Grab the free pricing checklist.`,
   };
 
   const handleRegenerate = () => {
-    // TODO: Regenerate content for current tab
-    console.log(`Regenerating content for ${activeTab}...`);
-    showToast("Regenerating content...", "success");
+    if (!outline.trim()) {
+      showToast("Please enter an outline first", "error");
+      return;
+    }
+
+    regenerateMutation.mutate({
+      outline,
+      platform: activeTab as "linkedin" | "x" | "carousel" | "shorts" | "blog",
+      cta,
+      utm,
+    });
   };
 
   return (
@@ -169,19 +239,54 @@ CTA (10s): Grab the free pricing checklist.`,
                 <div>
                   <label className="text-sm text-slate-600 font-medium block mb-2">Platforms</label>
                   <div className="flex flex-wrap gap-2">
-                    <button className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-medium">
+                    <button
+                      onClick={() => togglePlatform("linkedin")}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
+                        selectedPlatforms.includes("linkedin")
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       LinkedIn
                     </button>
-                    <button className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">
+                    <button
+                      onClick={() => togglePlatform("x")}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
+                        selectedPlatforms.includes("x")
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       X
                     </button>
-                    <button className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">
+                    <button
+                      onClick={() => togglePlatform("carousel")}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
+                        selectedPlatforms.includes("carousel")
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       Instagram
                     </button>
-                    <button className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">
+                    <button
+                      onClick={() => togglePlatform("shorts")}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
+                        selectedPlatforms.includes("shorts")
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       YouTube
                     </button>
-                    <button className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">
+                    <button
+                      onClick={() => togglePlatform("blog")}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
+                        selectedPlatforms.includes("blog")
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       Blog
                     </button>
                   </div>
@@ -191,8 +296,10 @@ CTA (10s): Grab the free pricing checklist.`,
                   className="w-full rounded-xl"
                   onClick={handleGenerateAll}
                   StartIcon={Wand}
+                  loading={generateAllMutation.isLoading}
+                  disabled={generateAllMutation.isLoading}
                 >
-                  Generate All
+                  {generateAllMutation.isLoading ? "Generating..." : "Generate All"}
                 </Button>
               </div>
             </div>
@@ -283,8 +390,10 @@ CTA (10s): Grab the free pricing checklist.`,
                     color="secondary"
                     onClick={handleRegenerate}
                     StartIcon={Wand}
+                    loading={regenerateMutation.isLoading}
+                    disabled={regenerateMutation.isLoading}
                   >
-                    Regenerate
+                    {regenerateMutation.isLoading ? "Regenerating..." : "Regenerate"}
                   </Button>
                 </div>
               </div>

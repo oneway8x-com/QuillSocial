@@ -30,4 +30,5 @@ export const ENDPOINTS = [
   "openaiUsage",
   "xConnect",
   "notifications",
+  "postFactory",
 ] as const;
