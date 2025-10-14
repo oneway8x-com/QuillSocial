@@ -3,7 +3,7 @@ import { debounce } from "lodash";
 import { useRouter } from "next/router";
 import useMeQuery from "@quillsocial/trpc/react/hooks/useMeQuery";
 import { TWITTER_APP_ID } from "@quillsocial/lib/constants";
-import { checkUserToUsePlug, useCurrentUserAccount } from "@quillsocial/features/shell/SocialAvatar";
+import { useCurrentUserAccount } from "@quillsocial/features/shell/SocialAvatar";
 import { trpc } from "@quillsocial/trpc/react";
 import { Post } from "@quillsocial/types/Posts";
 import { ReWriteAI } from "@quillsocial/types/ReWriteAI";
@@ -72,31 +72,45 @@ export function useWritePage() {
   const debouncedApiCall = useMemo(() => {
     return debounce(async (postId: number) => {
       if (credentialId !== null && credentialId !== undefined) {
-        const dataResponse = await postService.getPostById(credentialId, postId);
-        if (!dataResponse) return;
-        const data = dataResponse.data;
-        const postFromDb = {
-          id: data.id || 0,
-          topic: data.idea || "",
-          title: data.title || "",
-          content: data.content || "",
-          avatarUrl: data.credential?.avatarUrl || null,
-          name: data.credential?.name || null,
-          emailOrUserName: data.credential?.emailOrUserName || null,
-          credentialId: data.credential?.id || null,
-          createdDate: data.createdDate,
-          idea: data.idea || "",
-          appId: data.appId || "",
-          imagesDataURL: data.imagesDataURL,
-        };
-        setPost(postFromDb as any);
-        setEditorContent(postFromDb.content);
-        const images = data.imagesDataURL as string[];
-        setImageSrc(images && images.length > 0 ? images[0] : "");
-        if (data.xcommunity) {
-          setSelectedCommunity({ id: data.xcommunity, name: `Community ${data.xcommunity}` });
-        } else {
-          setSelectedCommunity(null);
+        try {
+          const dataResponse = await postService.getPostById(credentialId, postId);
+          if (!dataResponse || !dataResponse.data) {
+            console.error("No data response received for post:", postId);
+            return;
+          }
+          const data = dataResponse.data;
+
+          // Validate data structure
+          if (!data) {
+            console.error("Data is null or undefined");
+            return;
+          }
+
+          const postFromDb = {
+            id: data.id || 0,
+            topic: data.idea || "",
+            title: data.title || "",
+            content: data.content || "",
+            avatarUrl: data.credential?.avatarUrl || null,
+            name: data.credential?.name || null,
+            emailOrUserName: data.credential?.emailOrUserName || null,
+            credentialId: data.credential?.id || null,
+            createdDate: data.createdDate,
+            idea: data.idea || "",
+            appId: data.appId || "",
+            imagesDataURL: data.imagesDataURL,
+          };
+          setPost(postFromDb as any);
+          setEditorContent(postFromDb.content);
+          const images = data.imagesDataURL as string[];
+          setImageSrc(images && images.length > 0 ? images[0] : "");
+          if (data.xcommunity) {
+            setSelectedCommunity({ id: data.xcommunity, name: `Community ${data.xcommunity}` });
+          } else {
+            setSelectedCommunity(null);
+          }
+        } catch (error) {
+          console.error("Error fetching post data:", error);
         }
       }
     }, 150);
@@ -139,10 +153,11 @@ export function useWritePage() {
       xcommunity: selectedCommunity?.id || null,
     };
     const result = await postService.saveDraft(data);
-    if (result) {
+    if (result && result.id) {
       router.push(`/write/${result.id}`);
       return result;
     }
+    console.error("Failed to save draft or result is null");
     return null;
   };
 
@@ -162,7 +177,7 @@ export function useWritePage() {
 
   const handleUpdateFromScheduleDialog = async (pluginData?: any) => {
     const result = await saveDraft();
-    if (result) {
+    if (result && result.id) {
       const scheduleResult = await postService.schedulePost(result.id, selectedDateTime);
       setIsModalShowDay(false);
       if (scheduleResult) {
@@ -170,6 +185,9 @@ export function useWritePage() {
       } else {
         showToast("Failed to schedule", "error");
       }
+    } else {
+      showToast("Failed to save draft before scheduling", "error");
+      setIsModalShowDay(false);
     }
   };
 
@@ -192,8 +210,9 @@ export function useWritePage() {
       }
 
       const result = await saveDraft();
-      if (!result) {
+      if (!result || !result.id) {
         showToast("Failed to save draft before publishing", "error");
+        setIsPublishLoading(false);
         return;
       }
       let urlSocial = user?.currentSocialProfile?.appId?.replace(/-/g, "");
@@ -223,13 +242,12 @@ export function useWritePage() {
   };
 
   const currentUser = useCurrentUserAccount();
-  const isUsePlugDialog = checkUserToUsePlug();
-
+  const isPluginCommentSupported = currentUser?.appId === 'xconsumerkeys-social' || currentUser?.appId === 'twitterv1-social' || currentUser?.appId === 'x-social';
   const handleCheckPublishPost = () => {
     if (isPublishLoading) return;
     const currentSocialAccount = socialAccountsQuery.data?.find((account) => account.isUserCurrentProfile);
     const hasTwitterCredential = currentSocialAccount?.appId?.toLowerCase() === "xconsumerkeys-social";
-    if (isUsePlugDialog || hasTwitterCredential) {
+    if (isPluginCommentSupported || hasTwitterCredential) {
       if (hasTwitterCredential && editorContent) {
         const charCount = stripHtml(editorContent).length;
         setTwitterCharacterCount(charCount);
@@ -313,7 +331,7 @@ export function useWritePage() {
     isAIPresent,
     socialAccountsQuery,
     currentUser,
-    isUsePlugDialog,
+    isPluginCommentSupported,
     contentStyle,
 
     // actions

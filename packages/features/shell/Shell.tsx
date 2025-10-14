@@ -20,6 +20,8 @@ import { APP_NAME, WEBAPP_URL } from "@quillsocial/lib/constants";
 import getBrandColours from "@quillsocial/lib/getBrandColours";
 import { useIsomorphicLayoutEffect } from "@quillsocial/lib/hooks/useIsomorphicLayoutEffect";
 import { useLocale } from "@quillsocial/lib/hooks/useLocale";
+import { TawkToChat } from "@quillsocial/lib/tawkto";
+import type { TawkToVisitor } from "@quillsocial/lib/tawkto";
 import type { User } from "@quillsocial/prisma/client";
 import { trpc } from "@quillsocial/trpc/react";
 import useAvatarQuery from "@quillsocial/trpc/react/hooks/useAvatarQuery";
@@ -197,6 +199,47 @@ const Layout = (props: LayoutProps) => {
     };
   }, [bannerRef]);
 
+  // Handler for when visitor info is extracted from Tawk.to chat
+  const handleVisitorInfoExtracted = async (visitorInfo: TawkToVisitor | null) => {
+    console.log('📨 [Shell] handleVisitorInfoExtracted called:', {
+      hasVisitorInfo: !!visitorInfo,
+      visitorInfo
+    });
+
+    if (!visitorInfo) {
+      console.log('⚠️ [Shell] No visitor info to extract');
+      return;
+    }
+
+    try {
+      // Log visitor information with more details
+      console.log('✅ [Shell] Tawk.to visitor info extracted successfully:', {
+        name: visitorInfo.name,
+        nameType: typeof visitorInfo.name,
+        email: visitorInfo.email,
+        phone: visitorInfo.phone,
+        allFields: Object.keys(visitorInfo),
+        timestamp: new Date().toISOString(),
+        fullVisitorInfo: visitorInfo
+      });
+
+      // You can add additional logic here to save to your database
+      // Example: Send to analytics, CRM, or store in database
+      // await fetch('/api/chat/visitor', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     name: visitorInfo.name,
+      //     email: visitorInfo.email,
+      //     phone: visitorInfo.phone,
+      //     timestamp: new Date().toISOString()
+      //   })
+      // });
+    } catch (error) {
+      console.error('❌ [Shell] Failed to process visitor info:', error);
+    }
+  };
+
   // const navItems = redirectIfTrialOver(mobileNavigationBottomItems, desktopNavigationItems);
   // mobileNavigationBottomItems = navItems.mobileNavigationBottomItems;
   // desktopNavigationItems = navItems.desktopNavigationItems;
@@ -248,6 +291,41 @@ const Layout = (props: LayoutProps) => {
       <div>
         <Toaster position="bottom-right" />
       </div>
+
+      {/* Tawk.to Live Chat - Always extract visitor info from messages */}
+      {(() => {
+        const tawkUser = user ? {
+          name: user.name || user.username || undefined,
+          email: user.email || undefined,
+          userId: user.id,
+          username: user.username || undefined,
+        } : undefined;
+
+        console.log('🔵 [Shell] Rendering TawkToChat with user data:', {
+          hasUser: !!user,
+          tawkUser,
+          autoIdentify: !!user,
+          userFromQuery: {
+            id: user?.id,
+            name: user?.name,
+            username: user?.username,
+            email: user?.email
+          }
+        });
+
+        return (
+          <TawkToChat
+            user={tawkUser}
+            autoIdentify={!!user}
+            trackEvents={{
+              pageView: true,
+              userLogin: !!user,
+            }}
+            onVisitorInfoExtracted={handleVisitorInfoExtracted}
+            debug={process.env.NODE_ENV === 'development'}
+          />
+        );
+      })()}
 
       {/* todo: only run this if timezone is different */}
       <TimezoneChangeDialog />
@@ -619,6 +697,16 @@ const navigation: NavigationItemType[] = [
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
       return path.startsWith("/settings");
+    },
+  },
+  {
+    name: "Users",
+    href: "/users",
+    icon: Users,
+    isAdminOnly: true,
+    isCurrent: ({ router }) => {
+      const path = router.asPath.split("?")[0];
+      return path.startsWith("/users");
     },
   },
 

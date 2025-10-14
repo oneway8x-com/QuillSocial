@@ -6,11 +6,20 @@ import InputRecentLearning from "./inputRecentLearning";
 import InputShareStruggle from "./inputShareStruggle";
 import InputShareTips from "./inputShareTips";
 import InputStartScratch from "./inputStartScratch";
+import InputFeatureLaunch from "./inputFeatureLaunch";
+import InputSneakPeek from "./inputSneakPeek";
+import InputProblemSolution from "./inputProblemSolution";
+import InputUserFeedback from "./inputUserFeedback";
+import InputHowItWorks from "./inputHowItWorks";
+import InputBeforeAfter from "./inputBeforeAfter";
+import InputFounderVoice from "./inputFounderVoice";
+import InputSmallMighty from "./inputSmallMighty";
+import InputChangelog from "./inputChangelog";
 import React from "react";
 
 export interface InputData {
   countInput: number;
-  input: { id: string; value: string }[];
+  input: { id: string; value: string; optional?: boolean }[];
 }
 export interface InputTemplateProps {
   onInputData?: (data: InputData) => void;
@@ -23,99 +32,276 @@ const InputTemplateCustom: React.FC<{
   onInputData?: (data: InputData) => void;
 }> = ({ number, onInputData }) => {
   const components: { [key: number]: InputTemplateComponent } = {
-    1: InputStartScratch,
-    2: InputArticlePost,
-    3: InputBookLearnings,
-    4: InputShareTips,
-    5: InputRecentLearning,
-    6: InputFavouriteTool,
-    7: InputShareStruggle,
-    8: InputFormatContent,
+    1: InputFeatureLaunch,
+    2: InputSneakPeek,
+    3: InputProblemSolution,
+    4: InputUserFeedback,
+    5: InputHowItWorks,
+    6: InputBeforeAfter,
+    7: InputShareTips,
+    8: InputFounderVoice,
+    9: InputShareStruggle,
+    10: InputSmallMighty,
+    11: InputBookLearnings,
+    12: InputRecentLearning,
+    13: InputFavouriteTool,
+    14: InputChangelog,
+    15: InputStartScratch,
+    16: InputArticlePost,
+    17: InputFormatContent,
   };
 
   const SelectedInput = components[number] || InputStartScratch;
 
   return <SelectedInput onInputData={onInputData} />;
 };
-export const templatesInfo = [
+// Template Categories
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export const templateCategories: TemplateCategory[] = [
+  {
+    id: "launch",
+    name: "🚀 Product Launch",
+    description: "Announce features, updates, and new releases",
+    icon: "🚀",
+  },
+  {
+    id: "educational",
+    name: "🧠 Educational",
+    description: "How-to guides and tutorials",
+    icon: "🧠",
+  },
+  {
+    id: "narrative",
+    name: "❤️ Story & Narrative",
+    description: "Human stories and founder voice",
+    icon: "❤️",
+  },
+  {
+    id: "engagement",
+    name: "💬 Engagement",
+    description: "Share experiences and build community",
+    icon: "💬",
+  },
+  {
+    id: "general",
+    name: "✨ General",
+    description: "Versatile templates for any content",
+    icon: "✨",
+  },
+];
+
+export interface TemplateInfo {
+  id: number;
+  code: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  isNew: boolean;
+  backgroundColor: string;
+  category: string;
+}
+
+export const templatesInfo: TemplateInfo[] = [
+  // 🚀 PRODUCT LAUNCH CATEGORY
   {
     id: 1,
-    code: "from-scratch",
-    title: "Start from scratch",
-    subtitle: "Generate Post from Scratch",
+    code: "feature-launch",
+    title: "Feature Launch",
+    subtitle: "Classic 'Now Live' announcement",
     description:
-      "Use the power of AI-generated content to create impactful LinkedIn posts.",
+      "Launch your new feature with excitement. Perfect for announcing what's new and getting users to try it.",
     isNew: true,
     backgroundColor: "#94ecff",
+    category: "launch",
   },
   {
     id: 2,
-    code: "from-article",
-    title: "Article to LinkedIn Post",
-    subtitle: "Generate a post from an article",
-    description: "Share a link to a blog post and generate a post from it",
-    isNew: false,
-    backgroundColor: "#fffbb5",
+    code: "sneak-peek",
+    title: "Sneak Peek / Beta",
+    subtitle: "Build anticipation with early access",
+    description:
+      "Tease upcoming features and invite early users to beta test. Great for building anticipation.",
+    isNew: true,
+    backgroundColor: "#ffd6e7",
+    category: "launch",
   },
   {
     id: 3,
-    code: "book-learning",
-    title: "Share learnings from a book",
-    subtitle: "Share your learnings from a book",
+    code: "problem-solution",
+    title: "Problem → Solution",
+    subtitle: "Show how you solve real problems",
     description:
-      "Share the learnings from a book and let AI create a post for you.",
-    isNew: false,
-    backgroundColor: "#87ceeb",
+      "Present a common pain point and show how your feature solves it with proof.",
+    isNew: true,
+    backgroundColor: "#c7f0bd",
+    category: "launch",
   },
   {
     id: 4,
+    code: "user-feedback",
+    title: "Built from Feedback",
+    subtitle: "Community-driven feature launch",
+    description:
+      "Celebrate user feedback and show how you listen. Perfect for community building.",
+    isNew: true,
+    backgroundColor: "#fff4cc",
+    category: "launch",
+  },
+
+  // 🧠 EDUCATIONAL CATEGORY
+  {
+    id: 5,
+    code: "how-it-works",
+    title: "How It Works",
+    subtitle: "Step-by-step mini guide",
+    description:
+      "Break down complex features into 3 simple steps. Help users get started quickly.",
+    isNew: true,
+    backgroundColor: "#e8d5f2",
+    category: "educational",
+  },
+  {
+    id: 6,
+    code: "before-after",
+    title: "Before & After",
+    subtitle: "Show the transformation",
+    description:
+      "Highlight the difference your product makes. Show old way vs new way with metrics.",
+    isNew: true,
+    backgroundColor: "#ffd9b3",
+    category: "educational",
+  },
+  {
+    id: 7,
     code: "valuable-tips",
-    title: "Share valuable tips",
-    subtitle: "Share tips on your topic of interest",
+    title: "Share Valuable Tips",
+    subtitle: "Share tips on your topic",
     description:
       "Share the tips on your topic of interest and let AI create a post for you.",
     isNew: false,
     backgroundColor: "#90ee90",
+    category: "educational",
+  },
+
+  // ❤️ STORY & NARRATIVE CATEGORY
+  {
+    id: 8,
+    code: "founder-voice",
+    title: "Founder Voice",
+    subtitle: "Share your why and vision",
+    description:
+      "Tell the story behind your product. Connect with your audience on a personal level.",
+    isNew: true,
+    backgroundColor: "#ffb3ba",
+    category: "narrative",
   },
   {
-    id: 5,
+    id: 9,
+    code: "struggle",
+    title: "Share Your Struggle",
+    subtitle: "Be vulnerable and authentic",
+    description:
+      "Share the details of your recent struggle and let AI create a relatable post for you.",
+    isNew: false,
+    backgroundColor: "#ffcc99",
+    category: "narrative",
+  },
+  {
+    id: 10,
+    code: "small-mighty",
+    title: "Small but Mighty",
+    subtitle: "Celebrate micro-updates",
+    description:
+      "Highlight small improvements that make a big difference. Show attention to detail.",
+    isNew: true,
+    backgroundColor: "#b5e7a0",
+    category: "narrative",
+  },
+
+  // 💬 ENGAGEMENT CATEGORY
+  {
+    id: 11,
+    code: "book-learning",
+    title: "Share Book Learnings",
+    subtitle: "Share insights from books",
+    description:
+      "Share the learnings from a book and let AI create an engaging post for you.",
+    isNew: false,
+    backgroundColor: "#87ceeb",
+    category: "engagement",
+  },
+  {
+    id: 12,
     code: "recent-learning",
-    title: "Share your recent learning",
-    subtitle: "Share your recent learning",
+    title: "Share Recent Learning",
+    subtitle: "What you learned recently",
     description:
       "Share the details of your recent learning and let AI create a post for you.",
     isNew: false,
     backgroundColor: "#fac49d",
+    category: "engagement",
   },
   {
-    id: 6,
+    id: 13,
     code: "favourite-tool",
-    title: "Share your favourite tool",
-    subtitle: "Share your favourite tool",
+    title: "Share Favorite Tool",
+    subtitle: "Recommend tools you love",
     description:
-      "Share the details of your favourite tool and let AI create a post for you.",
+      "Share the details of your favorite tool and let AI create a post for you.",
     isNew: false,
     backgroundColor: "#add8e6",
+    category: "engagement",
   },
   {
-    id: 7,
-    code: "struggle",
-    title: "Share your struggle",
-    subtitle: "Share your recent struggle",
+    id: 14,
+    code: "changelog",
+    title: "Weekly Changelog",
+    subtitle: "Friendly update summary",
     description:
-      "Share the details of your recent struggle and let AI create a post for you.",
+      "Share what's new, improved, and fixed this week. Keep your community updated.",
+    isNew: true,
+    backgroundColor: "#d4f1f4",
+    category: "engagement",
+  },
+
+  // ✨ GENERAL CATEGORY
+  {
+    id: 15,
+    code: "from-scratch",
+    title: "Start from Scratch",
+    subtitle: "Generate post from scratch",
+    description:
+      "Use the power of AI-generated content to create impactful posts on any topic.",
     isNew: false,
-    backgroundColor: "#ffcc99",
+    backgroundColor: "#94ecff",
+    category: "general",
   },
   {
-    id: 8,
+    id: 16,
+    code: "from-article",
+    title: "Article to Post",
+    subtitle: "Convert articles to posts",
+    description: "Share a link to a blog post and generate an engaging post from it.",
+    isNew: false,
+    backgroundColor: "#fffbb5",
+    category: "general",
+  },
+  {
+    id: 17,
     code: "format-content",
-    title: "Format your content",
-    subtitle: "Format your content",
+    title: "Format Your Content",
+    subtitle: "Polish your existing content",
     description:
-      "Use the power of AI to format your clunky content into readable posts",
+      "Use the power of AI to format your clunky content into readable, engaging posts.",
     isNew: false,
     backgroundColor: "#f0e68c",
+    category: "general",
   },
 ];
 

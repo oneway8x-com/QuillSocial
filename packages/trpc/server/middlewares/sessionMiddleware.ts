@@ -1,6 +1,6 @@
 import type { TRPCContextInner } from "../createContext";
 import { middleware } from "../trpc";
-import { MembershipRole } from ".prisma/client";
+import { MembershipRole, UserPermissionRole } from ".prisma/client";
 import { WEBAPP_URL } from "@quillsocial/lib/constants";
 import { defaultAvatarSrc } from "@quillsocial/lib/defaultAvatarImage";
 import {
@@ -102,18 +102,9 @@ export async function getUserFromSession(
     ? `${WEBAPP_URL}/${user.username}/avatar.png`
     : defaultAvatarSrc({ email });
   const locale = user?.locale || ctx.locale;
-  let isAdmin = true;
-  if (user.teams && user.teams.length > 0) {
-    const ownerCount = await prisma.membership.count({
-      where: {
-        userId: user.id,
-        role: {
-          in: [MembershipRole.OWNER, MembershipRole.ADMIN],
-        },
-      },
-    });
-    isAdmin = ownerCount > 0 ? true : false;
-  }
+
+  // Check if user has ADMIN role from UserPermissionRole enum
+  const isAdmin = user.role === UserPermissionRole.ADMIN;
 
   return {
     ...user,
@@ -173,7 +164,7 @@ export const isAuthed = middleware(async ({ ctx, next }) => {
 
 export const isAdminMiddleware = isAuthed.unstable_pipe(({ ctx, next }) => {
   const { user } = ctx;
-  if (user?.role !== "ADMIN") {
+  if (user?.role !== UserPermissionRole.ADMIN) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({ ctx: { ...ctx, user: user } });

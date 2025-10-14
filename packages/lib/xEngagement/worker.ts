@@ -209,6 +209,22 @@ export async function processXEngagementJobs(): Promise<ProcessResult> {
 
         log.info(`Job ${job.id} marked as SUCCESS`);
 
+        // Update discovered post status to ENGAGED
+        await prisma.xDiscoveredPost.updateMany({
+          where: {
+            userId: job.userId,
+            xPostId: job.xPostId,
+          },
+          data: {
+            status: "ENGAGED",
+          },
+        });
+
+        log.info(`Updated xDiscoveredPost ${job.xPostId} status to ENGAGED`, {
+          userId: job.userId,
+          xPostId: job.xPostId,
+        });
+
         // Update usage counter
         await prisma.xUsageCounter.updateMany({
           where: { userId: job.userId },

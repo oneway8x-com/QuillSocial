@@ -104,7 +104,7 @@ const MainTemplate: React.FC<TemplateProps> = ({ id: code }) => {
   const checkInputData = (data: InputData | undefined) => {
     if (data && data.input) {
       const allValuesNonNull = data.input.every(
-        (item) => item.value !== null && item.value !== ""
+        (item) => item.optional || (item.value !== null && item.value !== "")
       );
       //   if (allValuesNonNull && selectFormat) {
       //     return true;

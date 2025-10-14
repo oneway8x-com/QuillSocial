@@ -7,6 +7,16 @@ import { generateFromScratch } from "@quillsocial/app-store/chatgptai/lib/comple
 import { generateRecentLearning } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-recent-learning";
 import { generateStruggle } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-struggle";
 import { generateValuableTips } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-valuable-tips";
+// New template generators
+import { generateFeatureLaunch } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-feature-launch";
+import { generateSneakPeek } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-sneak-peek";
+import { generateProblemSolution } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-problem-solution";
+import { generateUserFeedback } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-user-feedback";
+import { generateHowItWorks } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-how-it-works";
+import { generateBeforeAfter } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-before-after";
+import { generateFounderVoice } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-founder-voice";
+import { generateSmallMighty } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-small-mighty";
+import { generateChangelog } from "@quillsocial/app-store/chatgptai/lib/completions/generators/generate-changelog";
 import { getServerSession } from "@quillsocial/features/auth/lib/getServerSession";
 import { defaultResponder } from "@quillsocial/lib/server";
 import * as cheerio from "cheerio";
@@ -18,22 +28,51 @@ interface RequestInput {
   format?: string;
   inputs: {
     countInput: number;
-    input: { id: string; value: string }[];
+    input: { id: string; value: string; optional?: boolean }[];
   };
 }
 interface Generators {
   [key: number]: (...args: any[]) => Promise<any>;
 }
 
+/**
+ * Generator mapping following the template ID structure:
+ * 1: Feature Launch
+ * 2: Sneak Peek / Beta
+ * 3: Problem → Solution
+ * 4: Built from Feedback
+ * 5: How It Works
+ * 6: Before & After
+ * 7: Share Valuable Tips
+ * 8: Founder Voice
+ * 9: Share Your Struggle
+ * 10: Small but Mighty
+ * 11: Share Book Learnings
+ * 12: Share Recent Learning
+ * 13: Share Favorite Tool
+ * 14: Weekly Changelog
+ * 15: Start from Scratch
+ * 16: Article to Post
+ * 17: Format Your Content
+ */
 const generators: Generators = {
-  1: generateFromScratch,
-  2: generateFromArticle,
-  3: generateBookLearning,
-  4: generateValuableTips,
-  5: generateRecentLearning,
-  6: generateFavouriteTool,
-  7: generateStruggle,
-  8: generateFormatContent,
+  1: generateFeatureLaunch,      // Feature Launch
+  2: generateSneakPeek,          // Sneak Peek / Beta
+  3: generateProblemSolution,    // Problem → Solution
+  4: generateUserFeedback,       // Built from Feedback
+  5: generateHowItWorks,         // How It Works
+  6: generateBeforeAfter,        // Before & After
+  7: generateValuableTips,       // Share Valuable Tips
+  8: generateFounderVoice,       // Founder Voice
+  9: generateStruggle,           // Share Your Struggle
+  10: generateSmallMighty,       // Small but Mighty
+  11: generateBookLearning,      // Share Book Learnings
+  12: generateRecentLearning,    // Share Recent Learning
+  13: generateFavouriteTool,     // Share Favorite Tool
+  14: generateChangelog,         // Weekly Changelog
+  15: generateFromScratch,       // Start from Scratch
+  16: generateFromArticle,       // Article to Post
+  17: generateFormatContent,     // Format Your Content
 };
 
 async function handler(
@@ -54,7 +93,7 @@ async function handler(
   const numId = getIdFromCode(code);
 
   const isValidInputs = inputs.input.every(
-    (item) => item.value !== null && item.value !== ""
+    (item) => item.optional || (item.value !== null && item.value !== "")
   );
 
   if (!isValidInputs) {
@@ -62,11 +101,12 @@ async function handler(
     return;
   }
 
-  if (!numId) {
+  if (!numId || numId === -1) {
     res.status(400).json({ message: "Invalid code" });
     return;
   }
 
+  // Special handling for Article to Post template
   if (code === "from-article") {
     const url = inputs.input.find((x) => x.id === "url")?.value;
     const instructions = inputs.input.find(
@@ -77,28 +117,36 @@ async function handler(
       return;
     }
     const webContent = await fetchTextContent(url!);
-    const content = await generateFromArticle(
+    const result = await generateFromArticle(
       session?.user?.id!,
       url,
       instructions ?? "",
       webContent,
       format ? format : undefined
     );
-    return content;
+    // Extract post content from result (generators return { tokens, post })
+    const postContent = typeof result === 'string' ? result : result.post;
+    res.status(200).json({ post: postContent });
+    return;
+  }
+
+  // Handle all other templates through the generator registry
+  const generatorFunc = generators[numId];
+  if (generatorFunc) {
+    const valuesInput = inputs.input.map((input) => input.value || "");
+    const result = await generatorFunc(
+      session?.user?.id!,
+      ...valuesInput,
+      format ? format : undefined
+    );
+    // Extract post content from result (generators return { tokens, post })
+    const postContent = typeof result === 'string' ? result : result.post;
+    res.status(200).json({ post: postContent });
+    return;
   } else {
-    const generatorFunc = generators[numId];
-    if (generatorFunc) {
-      const valuesInput = inputs.input.map((input) => input.value || null);
-      const content = await generatorFunc(
-        session?.user?.id!,
-        ...valuesInput,
-        format ? format : undefined
-      );
-      return content;
-    } else {
-      console.error("Invalid code");
-      return null;
-    }
+    console.error(`No generator found for template ID: ${numId}`);
+    res.status(400).json({ message: "Invalid template ID" });
+    return;
   }
 }
 

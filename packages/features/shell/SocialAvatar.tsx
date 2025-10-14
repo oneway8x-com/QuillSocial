@@ -1,8 +1,8 @@
+import classNames from "@quillsocial/lib/classNames";
 import { WEBAPP_URL, LOGO_ICON } from "@quillsocial/lib/constants";
 import { trpc } from "@quillsocial/trpc/react";
 import { Avatar } from "@quillsocial/ui";
 import React from "react";
-import classNames from "@quillsocial/lib/classNames";
 
 interface SocialAvatarProps {
   avatarUrl: string;
@@ -83,19 +83,6 @@ export function useCurrentUserAccount() {
   }
 
   return socialAccounts.data.find((account) => account.isUserCurrentProfile);
-}
-
-export function checkUserToUsePlug() {
-  const currentUser = useCurrentUserAccount();
-  if (
-    // currentUser?.appId == `linkedin-social` ||
-    currentUser?.appId == `x-social` ||
-    currentUser?.appId == `twitterv1-social` ||
-    currentUser?.appId == `xconsumerkeyssocial`
-  ) {
-    return true;
-  }
-  return false;
 }
 
 export default SocialAvatar;

@@ -1,4 +1,4 @@
 import { createNextApiHandler } from "@quillsocial/trpc/server/createNextApiHandler";
-import { loggedInViewerRouter } from "@quillsocial/trpc/server/routers/loggedInViewer/_router";
+import { viewerRouter } from "@quillsocial/trpc/server/routers/viewer/_router";
 
-export default createNextApiHandler(loggedInViewerRouter);
+export default createNextApiHandler(viewerRouter);

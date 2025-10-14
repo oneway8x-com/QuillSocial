@@ -77,6 +77,11 @@ const markPostsInputSchema = z.object({
   status: z.enum(["QUEUED", "ENGAGED", "SKIPPED"]),
 });
 
+const commentOnPostInputSchema = z.object({
+  xPostId: z.string().min(1, "Post ID is required"),
+  comment: z.string().min(1, "Comment cannot be empty").max(280, "Comment must be 280 characters or less"),
+});
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -669,5 +674,132 @@ export const xConnectRouter = router({
     return {
       updated: updated.count,
     };
+  }),
+
+  /**
+   * Check if user has X Consumer Keys credential
+   */
+  hasXCredential: authedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    const credential = await prisma.credential.findFirst({
+      where: {
+        userId,
+        appId: "xconsumerkeys-social",
+        invalid: false,
+      },
+    });
+
+    return {
+      hasCredential: !!credential,
+    };
+  }),
+
+  /**
+   * Comment on a post directly (without queuing)
+   * Posts comment via API immediately, then marks post as ENGAGED on success or SKIPPED on error
+   */
+  commentOnPost: authedProcedure.input(commentOnPostInputSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.user.id;
+    const { xPostId, comment } = input;
+
+    // Get the post
+    const post = await prisma.xDiscoveredPost.findFirst({
+      where: {
+        userId,
+        xPostId,
+      },
+    });
+
+    if (!post) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Post not found",
+      });
+    }
+
+    // Get X credential
+    const credential = await getXCredential(userId);
+    if (!credential) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "No X credential found. Please connect your X account.",
+      });
+    }
+
+    // Check rate limits (optional but recommended)
+    const settings = await getOrCreateSettings(userId);
+    const todayPosted = await countPostsToday(userId);
+    const last3HoursPosted = await countPostsInLast3Hours(userId);
+
+    if (todayPosted >= settings.dailyMaxComments) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Daily comment limit reached",
+      });
+    }
+
+    if (last3HoursPosted >= 300) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Rate limit reached (300 posts per 3 hours)",
+      });
+    }
+
+    // Post the comment
+    try {
+      const result = await twitterManager.replyToTweet(credential.id, xPostId, comment);
+
+      if (!result.success) {
+        // Mark as skipped on error
+        await prisma.xDiscoveredPost.update({
+          where: { id: post.id },
+          data: { status: "SKIPPED" },
+        });
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error || "Failed to post comment",
+        });
+      }
+
+      // Mark as engaged on success
+      await prisma.xDiscoveredPost.update({
+        where: { id: post.id },
+        data: { status: "ENGAGED" },
+      });
+
+      // Update usage counter
+      const counter = await getOrCreateUsageCounter(userId);
+      await prisma.xUsageCounter.update({
+        where: { userId },
+        data: {
+          postsUsed: counter.postsUsed + 1,
+        },
+      });
+
+      return {
+        success: true,
+        tweetId: result.tweetId,
+        message: "Comment posted successfully!",
+      };
+    } catch (error: any) {
+      // Mark as skipped on any error
+      await prisma.xDiscoveredPost.update({
+        where: { id: post.id },
+        data: { status: "SKIPPED" },
+      });
+
+      // Re-throw TRPCError as is
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      // Wrap other errors
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message || "Failed to post comment",
+      });
+    }
   }),
 });

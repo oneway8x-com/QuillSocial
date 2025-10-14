@@ -27,6 +27,7 @@ const resolveEndpoint = (links: any) => {
   // to the correct API endpoints.
   // - viewer.me - 2 segment paths like this are for logged in requests
   // - viewer.public.i18n - 3 segments paths can be public or authed
+  // - viewer.admin.listUsers - 3+ segments for nested routers under viewer
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (ctx: any) => {
     const parts = ctx.op.path.split(".");
@@ -36,8 +37,16 @@ const resolveEndpoint = (links: any) => {
       endpoint = parts[0] as keyof typeof links;
       path = parts[1];
     } else {
-      endpoint = parts[1] as keyof typeof links;
-      path = parts.splice(2, parts.length - 2).join(".");
+      // For 3+ part paths, check if the second part is a known endpoint
+      // If not, use the first part as the endpoint (for nested routers like viewer.admin.*)
+      const potentialEndpoint = parts[1] as keyof typeof links;
+      if (links[potentialEndpoint]) {
+        endpoint = potentialEndpoint;
+        path = parts.splice(2, parts.length - 2).join(".");
+      } else {
+        endpoint = parts[0] as keyof typeof links;
+        path = parts.splice(1, parts.length - 1).join(".");
+      }
     }
     return links[endpoint]({ ...ctx, op: { ...ctx.op, path } });
   };

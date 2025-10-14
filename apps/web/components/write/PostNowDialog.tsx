@@ -1,6 +1,6 @@
 import PluginComment from "./PluginComment";
 import ModalUpgrade from "@quillsocial/features/payments/ModalUpgrade";
-import { checkUserToUsePlug } from "@quillsocial/features/shell/SocialAvatar";
+import { TWITTER_APP_ID } from "@quillsocial/lib/constants";
 import { Dialog, DialogContent, DialogFooter, Switch } from "@quillsocial/ui";
 import { Button, showToast } from "@quillsocial/ui";
 import { useState } from "react";
@@ -15,12 +15,14 @@ interface PostNowDialogProps {
   open: boolean;
   onClose: () => void;
   onUpdate: (pluginData?: PluginState) => void;
+  appId?: string;
 }
 
 export const PostNowDialog: React.FC<PostNowDialogProps> = ({
   open,
   onClose,
   onUpdate,
+  appId,
 }) => {
   const [isDisabledButton, setIsDisabledButton] = useState(false);
   const [isModalUpgradeOpen, setIsModalUpgradeOpen] = useState(false);
@@ -31,6 +33,9 @@ export const PostNowDialog: React.FC<PostNowDialogProps> = ({
     timeType: "",
     comment: "",
   });
+
+  // Check if plugin comments are supported for this app
+  const isPluginCommentSupported = appId === TWITTER_APP_ID;
 
   const handleDialogClose = () => {
     if (onClose) {
@@ -74,7 +79,6 @@ export const PostNowDialog: React.FC<PostNowDialogProps> = ({
       comment: comment,
     });
   };
-  const checkPlug = checkUserToUsePlug();
   return (
     <>
       <Dialog open={open}>
@@ -89,30 +93,30 @@ export const PostNowDialog: React.FC<PostNowDialogProps> = ({
             </div>
           </div>
           <div className="mt-3 text-center">
-            <div className="flex flex-col items-start justify-start">
-              <span className="font-medium">Post Settings</span>
-              <span className="text-sm">
-                These settings will affect this post only.
-              </span>
-            </div>
-            {checkPlug && (
-              <div className="mt-2 flex">
-                <Switch
-                  checked={isChecked}
-                  onClick={() => {
-                    setIsChecked(!isChecked);
-                  }}
-                />
-                <div className="flex flex-col items-start justify-start pl-4 pt-3 text-sm">
-                  <p className="font-semibold">{"Auto plug(comment)"}</p>
-                  <p className="text-left">
-                    {" "}
-                    Automatically add the first comment to your post.
-                  </p>
-                </div>
+                      <div className="flex flex-col items-start justify-start">
+            <span className="font-medium">Post Settings</span>
+            <span className="text-sm">
+              These settings will affect this post only.
+            </span>
+          </div>
+          {isPluginCommentSupported && (
+            <div className="mt-2 flex">
+              <Switch
+                checked={isChecked}
+                onClick={() => {
+                  setIsChecked(!isChecked);
+                }}
+              />
+              <div className="flex flex-col items-start justify-start pl-4 pt-3 text-sm">
+                <p className="font-semibold">{"Auto plug(comment)"}</p>
+                <p className="text-left">
+                  {" "}
+                  Automatically add the first comment to your post.
+                </p>
               </div>
-            )}
-            {isChecked && (
+            </div>
+          )}
+          {isChecked && (
               <PluginComment
                 isModalEmoji={isEmojiModal}
                 setIsModalEmoji={setIsEmojiModal}

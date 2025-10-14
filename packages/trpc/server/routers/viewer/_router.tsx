@@ -1,6 +1,7 @@
 import { mergeRouters, router } from "../../trpc";
 import { loggedInViewerRouter } from "../loggedInViewer/_router";
 import { publicViewerRouter } from "../publicViewer/_router";
+import { viewerAdminRouter } from "./admin/_router";
 import { appsRouter } from "./apps/_router";
 import { authRouter } from "./auth/_router";
 import { billingsRouter } from "./billings/_router";
@@ -21,6 +22,7 @@ export const viewerRouter = mergeRouters(
     googleWorkspace: googleWorkspaceRouter,
     teams: viewerTeamsRouter,
     organizations: viewerOrganizationsRouter,
+    admin: viewerAdminRouter,
     appsRouter: appsRouter,
     billings: billingsRouter,
     socials: socialsRouter,

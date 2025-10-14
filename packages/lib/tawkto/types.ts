@@ -83,6 +83,9 @@ export interface TawkToAPI {
   onChatMessageSystem?: (message: string) => void;
   onAgentJoinChat?: (data: { name: string; position: string; image: string; id: string }) => void;
   onAgentLeaveChat?: (data: { name: string; id: string }) => void;
+
+  // Additional methods to get visitor info
+  getVisitorInfo?: () => TawkToVisitor | null;
   onChatSatisfaction?: (satisfaction: -1 | 0 | 1) => void;
   onVisitorNameChanged?: (visitorName: string) => void;
   onFileUpload?: (link: string) => void;

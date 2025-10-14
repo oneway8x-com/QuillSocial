@@ -102,6 +102,24 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
   } = wp as any;
 
   const handleDeviceChange = (device: string) => setActiveDevice(device);
+
+  // Check if there's content (text or image) to enable publish/schedule buttons
+  const strippedContent = editorContent ? stripHtml(editorContent).trim() : "";
+  const hasTextContent = strippedContent.length > 0;
+  const hasImageContent = !!imageSrc;
+  const hasContent = hasTextContent || hasImageContent;
+
+  // Debug logging
+  console.log("=== Content Validation Debug ===");
+  console.log("editorContent:", editorContent);
+  console.log("strippedContent:", strippedContent);
+  console.log("strippedContent.length:", strippedContent.length);
+  console.log("imageSrc:", imageSrc);
+  console.log("hasTextContent:", hasTextContent);
+  console.log("hasImageContent:", hasImageContent);
+  console.log("hasContent:", hasContent);
+  console.log("================================");
+
   return (
     <>
       {isLoading && <LoadingDialog open={isLoading} />}
@@ -248,14 +266,15 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
 
                 <Button
                   onClick={() => setIsModalShowDay(true)}
-                  className="text-dark ml-1 mr-1 rounded-2xl border bg-white text-[12px] hover:text-white sm:ml-auto sm:mr-2 sm:text-sm"
+                  disabled={!hasContent}
+                  className="text-dark ml-1 mr-1 rounded-2xl border bg-white text-[12px] hover:text-white sm:ml-auto sm:mr-2 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Schedule
                 </Button>
 
                 <Button
                   onClick={() => handleCheckPublishPost()}
-                  disabled={isPublishLoading}
+                  disabled={isPublishLoading || !hasContent}
                   className="rounded-2xl text-[12px] hover:text-white sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPublishLoading ? "Publishing..." : "Publish"}
@@ -342,18 +361,23 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
                     /* handled in hook */
                   }}
                   onUpdate={handleUpdateFromScheduleDialog}
+                  appId={appId}
                 />
 
                 <PostNowDialog
                   open={isModalPostNow}
                   onClose={() => setIsModalPostNow(false)}
                   onUpdate={handlePostNow}
+                  appId={appId}
                 />
 
                 <AddImageDialog
                   open={isModalAddImage}
                   onClose={() => setIsModalAddImage(false)}
-                  handleImageChange={async (img: string, cloudFileId?: number) => {
+                  handleImageChange={async (
+                    img: string,
+                    cloudFileId?: number
+                  ) => {
                     setIsModalAddImage(false);
                     setImageSrc(img);
                     if (cloudFileId) {
