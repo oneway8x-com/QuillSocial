@@ -24,7 +24,7 @@ export default async function handler(
     const redirectUri = WEBAPP_URL + "/api/integrations/threadssocial/callback";
 
     // Threads scopes (minimal safe default). Allow override via query param.
-    const defaultScopes = ["threads_basic", "threads_content_publish"];
+    const defaultScopes = ["threads_basic", "threads_content_publish", "threads_keyword_search"];
     const scopesParam = (req.query.scopes as string) || defaultScopes.join(",");
 
     const codeVerifier = makeId(10);
