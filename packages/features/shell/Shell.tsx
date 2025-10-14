@@ -671,15 +671,15 @@ const navigation: NavigationItemType[] = [
       return path.startsWith("/x-connect");
     },
   },
-  {
-    name: "Threads Connect",
-    href: "/threads-connect",
-    icon: MessageCircle,
-    isCurrent: ({ router }) => {
-      const path = router.asPath.split("?")[0];
-      return path.startsWith("/threads-connect");
-    },
-  },
+  // {
+  //   name: "Threads Connect",
+  //   href: "/threads-connect",
+  //   icon: MessageCircle,
+  //   isCurrent: ({ router }) => {
+  //     const path = router.asPath.split("?")[0];
+  //     return path.startsWith("/threads-connect");
+  //   },
+  // },
   {
     name: "Headline Generator",
     href: "/tools/linkedin/headline-generator",
