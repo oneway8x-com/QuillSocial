@@ -13,27 +13,12 @@ import {
 import { useRouter } from "next/router";
 import React, { useState, useEffect } from "react";
 import { BlogMarkdownEditor } from "@components/blog-editor/BlogMarkdownEditor";
+import InputPanel from "@components/post-factory/InputPanel";
+import OutputPanel from "@components/post-factory/OutputPanel";
+import { parseXThread } from "@components/post-factory/utils";
 
 // Helper function to parse X/Twitter thread content into individual tweets
-function parseXThread(content: string): string[] {
-  // Try to split by numbered pattern (1/, 2/, 3/, etc.)
-  const numberedPattern = /\d+\/\s*/g;
-
-  // Check if content has numbered format
-  if (numberedPattern.test(content)) {
-    const items = content.split(numberedPattern).filter((item) => item.trim());
-    return items;
-  }
-
-  // Fallback: split by double newlines or single newlines if content is short
-  const byDoubleNewline = content.split(/\n\n+/).filter((item) => item.trim());
-  if (byDoubleNewline.length > 1) {
-    return byDoubleNewline;
-  }
-
-  // Last resort: split by single newlines
-  return content.split(/\n/).filter((item) => item.trim());
-}
+// parseXThread is now in utils and imported above
 
 interface Tab {
   id: string;
@@ -56,7 +41,7 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
   const [utm, setUtm] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<
     ("linkedin" | "x" | "carousel" | "shorts" | "blog")[]
-  >(["linkedin"]);
+  >(["linkedin", "x", "carousel", "shorts", "blog"]);
   const [xThreadItems, setXThreadItems] = useState<string[]>([]);
   const [carouselSlides, setCarouselSlides] = useState<string[]>([]);
 
@@ -138,17 +123,17 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         showToast("Loaded outline from idea", "success");
       } else if (idea) {
         // Use the idea title as a starting point
-        setOutline(idea.title);
-        showToast(
-          "Loaded idea. You can expand it to an outline first.",
-          "success"
-        );
+          setOutline(idea.title);
+          showToast(
+            "Loaded idea. You can expand it to an outline first.",
+            "success"
+          );
       }
     } else if (!ideaId) {
       // Reset form when no ideaId
       setOutline("");
       setTone("authoritative");
-      setSelectedPlatforms(["linkedin"]);
+        setSelectedPlatforms(["linkedin", "x", "carousel", "shorts", "blog"]);
       setCta("");
       setUtm("?utm_source=li&utm_medium=post");
       setOutputs({
@@ -389,340 +374,34 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         }
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Input Section */}
-          <div className="lg:col-span-1 p-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="mb-4 flex justify-between items-start">
-              <div>
-                <h3 className="text-base font-semibold mb-1">Input</h3>
-                <p className="text-sm text-slate-500">Outline</p>
-              </div>
-              <Button
-                size="sm"
-                className="rounded-xl"
-                onClick={handleGenerateAll}
-                StartIcon={Wand}
-                loading={generateAllMutation.isLoading}
-                disabled={generateAllMutation.isLoading}
-              >
-                {generateAllMutation.isLoading ? "Generating..." : "Generate"}
-              </Button>
-            </div>
+          <InputPanel
+            outline={outline}
+            setOutline={setOutline}
+            tone={tone}
+            setTone={setTone}
+            selectedPlatforms={selectedPlatforms}
+            togglePlatform={togglePlatform}
+            handleGenerateAll={handleGenerateAll}
+            generateLoading={generateAllMutation.isLoading}
+            cta={cta}
+            setCta={setCta}
+            utm={utm}
+            setUtm={setUtm}
+          />
 
-            <div className="space-y-4">
-              <TextArea
-                className="min-h-[200px] w-full rounded-xl border-slate-200"
-                value={outline}
-                onChange={(e) => setOutline(e.target.value)}
-                placeholder="Hook, 3 bullets, example, CTA"
-              />
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-slate-600 font-medium block mb-2">
-                    Tone
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setTone("friendly")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        tone === "friendly"
-                          ? "bg-blue-500 text-white"
-                          : "bg-blue-50 text-blue-700"
-                      }`}
-                    >
-                      Friendly
-                    </button>
-                    <button
-                      onClick={() => setTone("authoritative")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        tone === "authoritative"
-                          ? "bg-blue-500 text-white"
-                          : "bg-blue-50 text-blue-700"
-                      }`}
-                    >
-                      Authoritative
-                    </button>
-                    <button
-                      onClick={() => setTone("contrarian")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        tone === "contrarian"
-                          ? "bg-blue-500 text-white"
-                          : "bg-blue-50 text-blue-700"
-                      }`}
-                    >
-                      Contrarian
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm text-slate-600 font-medium block mb-2">
-                    Platforms
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => togglePlatform("linkedin")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        selectedPlatforms.includes("linkedin")
-                          ? "bg-blue-500 text-white"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      LinkedIn
-                    </button>
-                    <button
-                      onClick={() => togglePlatform("x")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        selectedPlatforms.includes("x")
-                          ? "bg-blue-500 text-white"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      X
-                    </button>
-                    <button
-                      onClick={() => togglePlatform("carousel")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        selectedPlatforms.includes("carousel")
-                          ? "bg-blue-500 text-white"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      Instagram
-                    </button>
-                    <button
-                      onClick={() => togglePlatform("shorts")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        selectedPlatforms.includes("shorts")
-                          ? "bg-blue-500 text-white"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      YouTube
-                    </button>
-                    <button
-                      onClick={() => togglePlatform("blog")}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        selectedPlatforms.includes("blog")
-                          ? "bg-blue-500 text-white"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      Blog
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Output Section */}
-          <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-base font-semibold mb-1">Outputs</h3>
-              <p className="text-sm text-slate-500">
-                Preview & tweak each format
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Tabs */}
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                      activeTab === tab.id
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    {tab.name}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="mt-4">
-                {activeTab === "carousel" ? (
-                  <div className="space-y-3">
-                    {carouselSlides.map((slide, index) => (
-                      <div key={index} className="flex gap-2">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-semibold">
-                          {index + 1}
-                        </div>
-                        <TextArea
-                          className="flex-1 min-h-[100px] rounded-xl border-slate-200"
-                          value={slide}
-                          onChange={(e) => {
-                            const newSlides = [...carouselSlides];
-                            newSlides[index] = e.target.value;
-                            setCarouselSlides(newSlides);
-                            // Update outputs as well
-                            setOutputs({
-                              ...outputs,
-                              carousel: newSlides.join("\n\n"),
-                            });
-                          }}
-                          placeholder={`Slide ${index + 1}: Title\n\n• Point 1\n• Point 2\n• Point 3`}
-                        />
-                        <button
-                          onClick={() => {
-                            const newSlides = carouselSlides.filter(
-                              (_, i) => i !== index
-                            );
-                            setCarouselSlides(newSlides);
-                            setOutputs({
-                              ...outputs,
-                              carousel: newSlides.join("\n\n"),
-                            });
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setCarouselSlides([
-                          ...carouselSlides,
-                          `Slide ${carouselSlides.length + 1}: Title\n\n• Point 1\n• Point 2\n• Point 3`,
-                        ]);
-                      }}
-                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
-                    >
-                      + Add slide
-                    </button>
-                  </div>
-                ) : activeTab === "x" ? (
-                  <div className="space-y-3">
-                    {xThreadItems.map((item, index) => (
-                      <div key={index} className="flex gap-2">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold">
-                          {index + 1}
-                        </div>
-                        <TextArea
-                          className="flex-1 min-h-[80px] rounded-xl border-slate-200"
-                          value={item}
-                          onChange={(e) => {
-                            const newItems = [...xThreadItems];
-                            newItems[index] = e.target.value;
-                            setXThreadItems(newItems);
-                            // Update outputs as well
-                            setOutputs({
-                              ...outputs,
-                              x: newItems
-                                .map((t, i) => `${i + 1}/ ${t}`)
-                                .join("\n\n"),
-                            });
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const newItems = xThreadItems.filter(
-                              (_, i) => i !== index
-                            );
-                            setXThreadItems(newItems);
-                            setOutputs({
-                              ...outputs,
-                              x: newItems
-                                .map((t, i) => `${i + 1}/ ${t}`)
-                                .join("\n\n"),
-                            });
-                          }}
-                          className="flex-shrink-0 text-red-500 hover:text-red-700 px-2"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setXThreadItems([...xThreadItems, ""]);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      + Add tweet
-                    </button>
-                  </div>
-                ) : activeTab === "blog" ? (
-                  <BlogMarkdownEditor
-                    value={outputs.blog}
-                    onChange={(value) =>
-                      setOutputs({ ...outputs, blog: value })
-                    }
-                    placeholder="Write your blog post in markdown..."
-                  />
-                ) : (
-                  <TextArea
-                    className="min-h-[300px] w-full rounded-xl border-slate-200"
-                    value={outputs[activeTab as keyof typeof outputs]}
-                    onChange={(e) =>
-                      setOutputs({ ...outputs, [activeTab]: e.target.value })
-                    }
-                  />
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-slate-200 my-4" />
-
-              {/* CTA & UTM Inputs */}
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      CTA
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                      value={cta}
-                      onChange={(e) => setCta(e.target.value)}
-                      placeholder="Join the pricing checklist"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      UTM
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                      value={utm}
-                      onChange={(e) => setUtm(e.target.value)}
-                      placeholder="?utm_source=li&utm_medium=post"
-                    />
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    className="rounded-xl"
-                    onClick={handleCopy}
-                    StartIcon={Copy}
-                  >
-                    Copy
-                  </Button>
-                  <Button
-                    className="rounded-xl"
-                    color="secondary"
-                    onClick={handleRegenerate}
-                    StartIcon={Wand}
-                    loading={regenerateMutation.isLoading}
-                    disabled={regenerateMutation.isLoading}
-                  >
-                    {regenerateMutation.isLoading
-                      ? "Regenerating..."
-                      : "Regenerate"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OutputPanel
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            outputs={outputs}
+            setOutputs={(o) => setOutputs(o)}
+            xThreadItems={xThreadItems}
+            setXThreadItems={setXThreadItems}
+            carouselSlides={carouselSlides}
+            setCarouselSlides={setCarouselSlides}
+            regenerateLoading={regenerateMutation.isLoading}
+            handleCopy={handleCopy}
+            handleRegenerate={handleRegenerate}
+          />
         </div>
       </Shell>
     </>

@@ -13,7 +13,6 @@ import {
 } from "@quillsocial/ui";
 import {
   ExternalLink,
-  Loader2,
   RefreshCw,
   X,
 } from "@quillsocial/ui/components/icon";
@@ -231,11 +230,10 @@ export function OutlineDrawer({
               color="secondary"
               onClick={handleRegenerate}
               disabled={actuallyGenerating || !onGenerate}
-              StartIcon={actuallyGenerating ? Loader2 : RefreshCw}
-              className={actuallyGenerating ? "animate-spin" : ""}
+              StartIcon={!actuallyGenerating ? RefreshCw : undefined}
               data-testid="outline-regenerate"
             >
-              {actuallyGenerating ? "Generating..." : "Generate Outline"}
+              {actuallyGenerating ? "Processing…" : "Generate Outline"}
             </Button>
           </div>
         </div>

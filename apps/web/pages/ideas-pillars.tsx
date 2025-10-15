@@ -12,7 +12,7 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
-  TextField,
+  TextArea,
   Label,
 } from "@quillsocial/ui";
 import {
@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Loader2,
   Settings,
+  Edit2,
 } from "@quillsocial/ui/components/icon";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
@@ -38,6 +39,8 @@ function IdeasPillarsPage() {
   const [addIdeaOpen, setAddIdeaOpen] = useState(false);
   const [managePillarsOpen, setManagePillarsOpen] = useState(false);
   const [newIdeaTitle, setNewIdeaTitle] = useState("");
+  const [editIdeaOpen, setEditIdeaOpen] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<{ id: string; title: string } | null>(null);
 
   // Queries
   const { data: pillars = [], isLoading: pillarsLoading } = trpc.viewer.ideasPillars.listPillars.useQuery();
@@ -68,6 +71,18 @@ function IdeasPillarsPage() {
     },
     onError: (error) => {
       showToast(error.message || "Failed to delete idea", "error");
+    },
+  });
+
+  const updateIdeaMutation = trpc.viewer.ideasPillars.updateIdea.useMutation({
+    onSuccess: () => {
+      utils.viewer.ideasPillars.listIdeas.invalidate();
+      showToast("Idea updated successfully", "success");
+      setEditIdeaOpen(false);
+      setEditingIdea(null);
+    },
+    onError: (error) => {
+      showToast(error.message || "Failed to update idea", "error");
     },
   });
 
@@ -165,6 +180,24 @@ function IdeasPillarsPage() {
     }
   };
 
+  const handleEditIdea = (idea: { id: string; title: string }, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingIdea(idea);
+    setEditIdeaOpen(true);
+  };
+
+  const handleUpdateIdea = () => {
+    if (!editingIdea) return;
+    if (!editingIdea.title.trim()) {
+      showToast("Please enter an idea title", "error");
+      return;
+    }
+    updateIdeaMutation.mutate({
+      id: editingIdea.id,
+      title: editingIdea.title.trim(),
+    });
+  };
+
   // Get current outline for drawer
   const currentOutlineIdea = ideas.find((idea) => idea.id === openOutlineForIdeaId);
   const currentOutline = currentOutlineIdea?.outline
@@ -215,12 +248,12 @@ function IdeasPillarsPage() {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="idea-title">Idea Title</Label>
-                    <TextField
+                    <TextArea
                       id="idea-title"
                       value={newIdeaTitle}
                       onChange={(e) => setNewIdeaTitle(e.target.value)}
                       placeholder="Enter your idea..."
-                      className="mt-2"
+                      className="mt-2 min-h-[100px] rounded-md border border-slate-200 px-3 py-2 text-sm"
                     />
                   </div>
                   <div className="flex justify-end gap-2">
@@ -322,6 +355,12 @@ function IdeasPillarsPage() {
                             </button>
                             <button className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                               <ChevronDown className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => handleEditIdea({ id: idea.id, title: idea.title }, e)}
+                              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                            >
+                              <Edit2 className="h-4 w-4" />
                             </button>
                             <button
                               onClick={(e) => handleDeleteIdea(idea.id, e)}
@@ -449,6 +488,40 @@ function IdeasPillarsPage() {
                 utils.viewer.ideasPillars.listPillars.invalidate();
               }}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Idea Dialog */}
+        <Dialog open={editIdeaOpen} onOpenChange={setEditIdeaOpen}>
+          <DialogContent className="sm:max-w-md">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Edit Idea</h3>
+              </div>
+              <div>
+                <Label htmlFor="edit-idea-title">Idea Title</Label>
+                <TextArea
+                  id="edit-idea-title"
+                  value={editingIdea?.title || ""}
+                  onChange={(e) => setEditingIdea(editingIdea ? { ...editingIdea, title: e.target.value } : null)}
+                  placeholder="Enter your idea..."
+                  className="mt-2 min-h-[100px] rounded-md border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button color="minimal" onClick={() => setEditIdeaOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  onClick={handleUpdateIdea}
+                  disabled={updateIdeaMutation.isLoading}
+                >
+                  {updateIdeaMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </Shell>
