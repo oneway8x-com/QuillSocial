@@ -1,0 +1,96 @@
+import React from "react";
+import type { AudienceStage, Plan, ToneOption } from "@components/copilot/types";
+import { PurposeCard } from "@components/copilot/PurposeCard";
+import { PlanPreview } from "@components/copilot/PlanPreview";
+
+interface Step1PurposePlanProps {
+  purpose: string;
+  onPurposeChange: (value: string) => void;
+  tone: ToneOption;
+  onToneChange: (tone: ToneOption) => void;
+  audienceStage: AudienceStage;
+  onAudienceStageChange: (stage: AudienceStage) => void;
+  selectedPresetId: string | null;
+  onSelectPreset: (presetId: string) => void;
+  onGeneratePlan: () => void;
+  isGenerating: boolean;
+  plan: Plan | null;
+}
+
+export const Step1PurposePlan: React.FC<Step1PurposePlanProps> = ({
+  purpose,
+  onPurposeChange,
+  tone,
+  onToneChange,
+  audienceStage,
+  onAudienceStageChange,
+  selectedPresetId,
+  onSelectPreset,
+  onGeneratePlan,
+  isGenerating,
+  plan,
+}) => {
+  return (
+    <div className="flex flex-col gap-6 animate-fade-in-up">
+      {/* Welcome Banner */}
+      <div className="rounded-2xl border border-subtle bg-gradient-to-br from-brand-subtle/10 to-brand-default/5 p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 rounded-lg bg-brand-default p-2">
+            <svg
+              className="h-6 w-6 text-brand-accent"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-emphasis">Post smarter in 5 minutes</h2>
+            <p className="mt-1 text-sm text-default">
+              We'll set a plan, schedule one post, and start your reply habit. Let's begin by defining your purpose.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Purpose Card and Plan Preview Grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PurposeCard
+          purpose={purpose}
+          onPurposeChange={onPurposeChange}
+          tone={tone}
+          onToneChange={onToneChange}
+          audienceStage={audienceStage}
+          onAudienceStageChange={onAudienceStageChange}
+          selectedPresetId={selectedPresetId}
+          onSelectPreset={onSelectPreset}
+          onGeneratePlan={onGeneratePlan}
+          onUsePreset={onGeneratePlan}
+          disableGenerate={!purpose.trim() && !selectedPresetId}
+          isGenerating={isGenerating}
+        />
+
+        {plan && (
+          <div className="animate-fade-in-up">
+            <PlanPreview
+              plan={plan}
+              expandedBlock={null}
+              onToggleBlock={() => {}}
+              onEditPillars={() => {}}
+              onEditCadence={() => {}}
+              onEditTargets={() => {}}
+              onEditEngagement={() => {}}
+              validationErrors={{}}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

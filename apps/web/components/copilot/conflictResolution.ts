@@ -1,4 +1,5 @@
-import { CadenceConflict, CadenceDay, Plan } from "./types";
+import { CadenceDay, Plan } from "./types";
+import type { CadenceConflict } from "./utils";
 
 export const applyConflictResolutions = (
   plan: Plan,
@@ -26,4 +27,3 @@ export const applyConflictResolutions = (
 
   return { ...plan, cadence: updatedCadence };
 };
-

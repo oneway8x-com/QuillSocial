@@ -100,7 +100,7 @@ export const ideasPillarsRouter = router({
       { name: "Playbooks", color: "bg-orange-500", order: 3 },
     ];
 
-    const createdPillars = [];
+    const createdPillars: any[] = [];
 
     for (const pillarData of defaultPillars) {
       const existing = await ctx.prisma.pillar.findUnique({

@@ -47,11 +47,11 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
   ];
 
   return (
-    <div className="p-6 space-y-6 rounded-2xl border border-slate-200 bg-white">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Purpose</h2>
-          <p className="text-sm text-slate-500">
+    <div className="rounded-2xl border border-subtle bg-default p-6 shadow-sm space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-emphasis">Purpose</h2>
+          <p className="mt-1 text-sm text-default">
             Describe what you want to achieve. Copilot will translate it into pillars, cadence, and reach targets.
           </p>
         </div>
@@ -60,6 +60,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
           onClick={onGeneratePlan}
           StartIcon={isGenerating ? Loader2 : Wand2}
           disabled={disableGenerate || isGenerating}
+          className="shrink-0"
         >
           {isGenerating ? "Generating" : "Generate Plan"}
         </Button>
@@ -67,7 +68,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-600" htmlFor="copilot-purpose">
+          <label className="text-sm font-medium text-default" htmlFor="copilot-purpose">
             Describe what you want to achieve
           </label>
           <TextArea
@@ -76,13 +77,13 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
             onChange={(event) => onPurposeChange(event.target.value)}
             rows={5}
             placeholder="e.g. Launch a contrarian SaaS voice that attracts senior operators"
-            className="min-h-[160px]"
+            className="min-h-[140px]"
           />
         </div>
 
         <div className="space-y-3">
           <div className="space-y-2">
-            <span className="text-sm font-medium text-slate-600">Preset personas</span>
+            <label className="text-sm font-medium text-slate-600">Preset personas</label>
             <div className="flex flex-wrap gap-2">
               {COPILOT_PRESETS.map((preset) => (
                 <button
@@ -90,10 +91,10 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
                   type="button"
                   onClick={() => onSelectPreset(preset.id)}
                   className={classNames(
-                    "rounded-full border px-4 py-1.5 text-sm font-medium transition",
+                    "rounded-full px-4 py-1.5 text-sm font-medium",
                     selectedPresetId === preset.id
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-200"
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-50 text-blue-700"
                   )}
                 >
                   {preset.label}
@@ -102,61 +103,60 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[160px] space-y-2">
-              <span className="text-sm font-medium text-slate-600">Tone</span>
-              <div className="flex gap-2">
-                {toneOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => onToneChange(option.key)}
-                    className={classNames(
-                      "flex-1 rounded-xl px-3 py-1.5 text-sm font-medium",
-                      tone === option.key
-                        ? "bg-blue-500 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-600">Tone</label>
+            <div className="flex gap-2">
+              {toneOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => onToneChange(option.key)}
+                  className={classNames(
+                    "px-3 py-1.5 rounded-xl text-sm font-medium",
+                    tone === option.key
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-50 text-blue-700"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="flex-1 min-w-[160px] space-y-2">
-              <span className="text-sm font-medium text-slate-600">Audience size</span>
-              <div className="flex gap-2">
-                {audienceOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => onAudienceStageChange(option.key)}
-                    className={classNames(
-                      "flex-1 rounded-xl px-3 py-1.5 text-sm font-medium",
-                      audienceStage === option.key
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-600">Audience size</label>
+            <div className="flex gap-2">
+              {audienceOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => onAudienceStageChange(option.key)}
+                  className={classNames(
+                    "px-3 py-1.5 rounded-xl text-sm font-medium",
+                    audienceStage === option.key
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-50 text-blue-700"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Info size={16} />
+      <div className="flex flex-col gap-3 rounded-lg border border-subtle bg-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2 text-sm text-default">
+          <Info size={16} className="mt-0.5 shrink-0" />
           <span>Using a preset keeps defaults but still lets you edit before applying.</span>
         </div>
         <Button
-          variant="secondary"
+          color="secondary"
           onClick={onUsePreset}
           disabled={!selectedPresetId}
+          className="shrink-0 sm:ml-4"
         >
           Use Preset
         </Button>
@@ -164,4 +164,3 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
     </div>
   );
 };
-

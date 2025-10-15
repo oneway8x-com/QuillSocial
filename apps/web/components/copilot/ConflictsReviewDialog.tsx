@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader } from "@quillsocial/ui";
 import classNames from "classnames";
-import { CadenceConflict, CadenceDay } from "./types";
+import { CadenceDay } from "./types";
 import { cadenceDays } from "./utils";
+import type { CadenceConflict } from "./utils";
 
 interface ConflictsReviewDialogProps {
   open: boolean;
@@ -71,4 +72,3 @@ export const ConflictsReviewDialog: React.FC<ConflictsReviewDialogProps> = ({ op
     </Dialog>
   );
 };
-
