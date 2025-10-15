@@ -45,7 +45,7 @@ export function createTawkToConfig(overrides?: Partial<TawkToConfig>): TawkToCon
  */
 export function generateTawkToHash(email: string, apiKey: string): string {
   if (typeof window !== 'undefined') {
-    console.warn('Tawk.to hash generation should be done server-side for security');
+    // Hash generation should be done server-side for security
     return '';
   }
 

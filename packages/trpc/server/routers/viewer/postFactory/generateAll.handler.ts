@@ -32,24 +32,23 @@ export async function generateAllHandler({ ctx, input }: GenerateAllHandlerOptio
     },
   });
 
-  // Parse the generated drafts into platform-specific outputs
-  const outputData = typeof result.output === 'string' ? { drafts: result.output } : result.output;
-  const draftsText = (outputData?.drafts as string) || "";
+  // Parse the generated posts from the agent output
+  const outputData = typeof result.output === 'string' ? { posts: {} } : result.output;
+  const posts = (outputData?.posts as Record<string, string | string[]>) || {};
 
-  // Simple parsing: split by platform names (more sophisticated parsing could be added)
-  const outputs: Record<string, string> = {};
+  // Map the posts to the output format
+  const outputs: Record<string, string | string[]> = {};
 
-  // Split the drafts by platform headers
   platforms.forEach((platform) => {
-    const platformRegex = new RegExp(
-      `(?:${platform}|${platform.toUpperCase()})[:\\s]*([\\s\\S]*?)(?=(?:linkedin|x|carousel|shorts|blog|$))`,
-      "i"
-    );
-    const match = draftsText.match(platformRegex);
-    if (match && match[1]) {
-      outputs[platform] = match[1].trim();
+    // Get the post from the structured JSON response
+    if (posts[platform]) {
+      outputs[platform] = posts[platform];
     } else {
-      outputs[platform] = `Content for ${platform} - generation in progress...`;
+      // Fallback if platform not found
+      // X and carousel return arrays, others return strings
+      outputs[platform] = (platform === 'x' || platform === 'carousel')
+        ? [`Content for ${platform} - generation in progress...`]
+        : `Content for ${platform} - generation in progress...`;
     }
   });
 

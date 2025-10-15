@@ -32,17 +32,17 @@ export async function regenerateHandler({ ctx, input }: RegenerateHandlerOptions
     },
   });
 
-  // Extract the content for the specific platform
-  const outputData = typeof result.output === 'string' ? { drafts: result.output } : result.output;
-  const draftsText = (outputData?.drafts as string) || "";
+  // Extract the content for the specific platform from the JSON response
+  const outputData = typeof result.output === 'string' ? { posts: {} } : result.output;
+  const posts = (outputData?.posts as Record<string, string | string[]>) || {};
 
-  // Simple parsing to extract platform content
-  const platformRegex = new RegExp(
-    `(?:${platform}|${platform.toUpperCase()})[:\\s]*([\\s\\S]*?)$`,
-    "i"
+  // Get the content for the specific platform
+  // X and carousel return arrays, others return strings
+  const content = posts[platform] || (
+    (platform === 'x' || platform === 'carousel')
+      ? [`Content for ${platform} - generation in progress...`]
+      : `Content for ${platform} - generation in progress...`
   );
-  const match = draftsText.match(platformRegex);
-  const content = match && match[1] ? match[1].trim() : draftsText.trim();
 
   return {
     content,

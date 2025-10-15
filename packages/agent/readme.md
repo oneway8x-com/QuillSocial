@@ -108,6 +108,37 @@ import { contentTools } from "@quill/agent";
 // generatePostsTool - Creates platform-specific posts from outlines
 ```
 
+#### Generate Posts Output
+
+The `generatePostsTool` returns a structured JSON object with each platform as a key:
+
+```typescript
+const result = await agent.run({
+  task: "Generate posts for LinkedIn and X",
+  inputs: {
+    outline: "Your content outline here...",
+    channels: ["linkedin", "x"],
+    cta: "Learn more at example.com",
+  },
+  meta: {
+    userId: 123,
+    requestType: "generate_posts",
+  },
+});
+
+// result.output.posts structure:
+// {
+//   "linkedin": "LinkedIn post content...",
+//   "x": ["Tweet 1/3: First tweet...", "Tweet 2/3: Second tweet...", "Tweet 3/3: Final tweet..."],
+//   "carousel": "Carousel slides content...",
+//   "shorts": "Shorts/Reels script...",
+//   "blog": "Blog post content..."
+// }
+//
+// Note: X/Twitter returns an array of strings (thread format) where each tweet is ≤280 characters
+// Other platforms return a single string
+```
+
 ### Engagement Tools
 
 ```typescript

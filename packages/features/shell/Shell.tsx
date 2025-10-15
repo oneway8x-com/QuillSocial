@@ -1,6 +1,6 @@
 import { redirectIfTrialOver } from "../payments/redirectIfTrialOver";
-import { ModalAccount } from "./SocialAccountsDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { ModalAccount } from "./SocialAccountsDialog";
 import SocialAvatar from "./SocialAvatar";
 import { BillingNotifications } from "./components/BillingNotifications";
 import useAddAppMutation from "@quillsocial/app-store/_utils/useAddAppMutation";
@@ -200,27 +200,29 @@ const Layout = (props: LayoutProps) => {
   }, [bannerRef]);
 
   // Handler for when visitor info is extracted from Tawk.to chat
-  const handleVisitorInfoExtracted = async (visitorInfo: TawkToVisitor | null) => {
-    console.log('📨 [Shell] handleVisitorInfoExtracted called:', {
+  const handleVisitorInfoExtracted = async (
+    visitorInfo: TawkToVisitor | null
+  ) => {
+    console.log("📨 [Shell] handleVisitorInfoExtracted called:", {
       hasVisitorInfo: !!visitorInfo,
-      visitorInfo
+      visitorInfo,
     });
 
     if (!visitorInfo) {
-      console.log('⚠️ [Shell] No visitor info to extract');
+      console.log("⚠️ [Shell] No visitor info to extract");
       return;
     }
 
     try {
       // Log visitor information with more details
-      console.log('✅ [Shell] Tawk.to visitor info extracted successfully:', {
+      console.log("✅ [Shell] Tawk.to visitor info extracted successfully:", {
         name: visitorInfo.name,
         nameType: typeof visitorInfo.name,
         email: visitorInfo.email,
         phone: visitorInfo.phone,
         allFields: Object.keys(visitorInfo),
         timestamp: new Date().toISOString(),
-        fullVisitorInfo: visitorInfo
+        fullVisitorInfo: visitorInfo,
       });
 
       // You can add additional logic here to save to your database
@@ -236,7 +238,7 @@ const Layout = (props: LayoutProps) => {
       //   })
       // });
     } catch (error) {
-      console.error('❌ [Shell] Failed to process visitor info:', error);
+      console.error("❌ [Shell] Failed to process visitor info:", error);
     }
   };
 
@@ -294,24 +296,14 @@ const Layout = (props: LayoutProps) => {
 
       {/* Tawk.to Live Chat - Always extract visitor info from messages */}
       {(() => {
-        const tawkUser = user ? {
-          name: user.name || user.username || undefined,
-          email: user.email || undefined,
-          userId: user.id,
-          username: user.username || undefined,
-        } : undefined;
-
-        console.log('🔵 [Shell] Rendering TawkToChat with user data:', {
-          hasUser: !!user,
-          tawkUser,
-          autoIdentify: !!user,
-          userFromQuery: {
-            id: user?.id,
-            name: user?.name,
-            username: user?.username,
-            email: user?.email
-          }
-        });
+        const tawkUser = user
+          ? {
+              name: user.name || user.username || undefined,
+              email: user.email || undefined,
+              userId: user.id,
+              username: user.username || undefined,
+            }
+          : undefined;
 
         return (
           <TawkToChat
@@ -322,7 +314,7 @@ const Layout = (props: LayoutProps) => {
               userLogin: !!user,
             }}
             onVisitorInfoExtracted={handleVisitorInfoExtracted}
-            debug={process.env.NODE_ENV === 'development'}
+            debug={process.env.NODE_ENV === "development"}
           />
         );
       })()}

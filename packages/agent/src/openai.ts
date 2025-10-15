@@ -8,6 +8,7 @@ export type OpenAIOptions = {
   temperature?: number;
   maxTokens?: number;
   topP?: number;
+  responseFormat?: "text" | "json_object";
 };
 
 /**
@@ -49,6 +50,7 @@ export function withUsageLogging(
         temperature: opts?.temperature ?? 0.7,
         max_tokens: opts?.maxTokens,
         top_p: opts?.topP,
+        response_format: opts?.responseFormat === "json_object" ? { type: "json_object" } : undefined,
       });
     } catch (error) {
       ctx.logger?.error("OpenAI API call failed", error);

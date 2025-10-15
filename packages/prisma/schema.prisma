@@ -639,6 +639,17 @@ model Post {
   title            String?
   tagOrKeywords    String?
   xcommunity       String?
+  // Post Factory fields
+  ideaId           String?
+  ideaRef          Idea?           @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  tone             OutlineTone?
+  multiPlatformOutputs Json?       // {linkedin: string, x: string, carousel: string, shorts: string, blog: string}
+  cta              String?         @db.Text
+  utm              String?
+
+  @@index([userId])
+  @@index([ideaId])
+  @@index([status])
 }
 
 enum PostStatus {
@@ -991,6 +1002,7 @@ model Idea {
   status    IdeaStatus @default(RAW)
   tags      String[]   @default([])
   outline   Outline?
+  posts     Post[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
