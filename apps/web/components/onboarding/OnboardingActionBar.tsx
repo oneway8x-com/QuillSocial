@@ -21,12 +21,12 @@ export const OnboardingActionBar: React.FC<OnboardingActionBarProps> = ({
   secondaryAction,
 }) => {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-subtle bg-default/95 backdrop-blur-md shadow-lg">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-        <div className="text-sm text-default">{statusLabel}</div>
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-md shadow-lg">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+        <div className="text-sm text-slate-600">{statusLabel}</div>
         <div className="flex items-center gap-3">
           {secondaryAction && (
-            <Button color="minimal" size="sm" onClick={secondaryAction.onClick}>
+            <Button color="minimal" size="sm" onClick={secondaryAction.onClick} className="rounded-xl">
               {secondaryAction.label}
             </Button>
           )}
@@ -34,6 +34,7 @@ export const OnboardingActionBar: React.FC<OnboardingActionBarProps> = ({
             onClick={primaryAction.onClick}
             disabled={primaryAction.disabled}
             loading={primaryAction.loading}
+            className="rounded-xl"
           >
             {primaryAction.label}
           </Button>

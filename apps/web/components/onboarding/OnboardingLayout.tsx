@@ -29,7 +29,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
 }) => {
   return (
-    <div className="min-h-screen bg-muted pb-24">
+    <div className="min-h-screen bg-slate-50 pb-24">
       <Head>
         <title>Onboarding – QuillSocial</title>
         <meta name="description" content="Get started with QuillSocial in just 5 minutes" />
@@ -37,7 +37,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
       <OnboardingProgressHeader currentStep={currentStep} />
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {children}
       </main>
 

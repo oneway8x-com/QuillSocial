@@ -47,11 +47,11 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
   ];
 
   return (
-    <div className="rounded-2xl border border-subtle bg-default p-6 shadow-sm space-y-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-emphasis">Purpose</h2>
-          <p className="mt-1 text-sm text-default">
+          <h2 className="text-lg font-semibold text-slate-900">Purpose</h2>
+          <p className="mt-1 text-sm text-slate-600">
             Describe what you want to achieve. Copilot will translate it into pillars, cadence, and reach targets.
           </p>
         </div>
@@ -60,7 +60,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
           onClick={onGeneratePlan}
           StartIcon={isGenerating ? Loader2 : Wand2}
           disabled={disableGenerate || isGenerating}
-          className="shrink-0"
+          className="shrink-0 rounded-xl"
         >
           {isGenerating ? "Generating" : "Generate Plan"}
         </Button>
@@ -68,7 +68,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-default" htmlFor="copilot-purpose">
+          <label className="text-sm font-medium text-slate-700" htmlFor="copilot-purpose">
             Describe what you want to achieve
           </label>
           <TextArea
@@ -77,7 +77,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
             onChange={(event) => onPurposeChange(event.target.value)}
             rows={5}
             placeholder="e.g. Launch a contrarian SaaS voice that attracts senior operators"
-            className="min-h-[140px]"
+            className="min-h-[140px] rounded-xl border-slate-200"
           />
         </div>
 
@@ -147,8 +147,8 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-subtle bg-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-2 text-sm text-default">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2 text-sm text-slate-600">
           <Info size={16} className="mt-0.5 shrink-0" />
           <span>Using a preset keeps defaults but still lets you edit before applying.</span>
         </div>
@@ -156,7 +156,7 @@ export const PurposeCard: React.FC<PurposeCardProps> = ({
           color="secondary"
           onClick={onUsePreset}
           disabled={!selectedPresetId}
-          className="shrink-0 sm:ml-4"
+          className="shrink-0 sm:ml-4 rounded-xl"
         >
           Use Preset
         </Button>

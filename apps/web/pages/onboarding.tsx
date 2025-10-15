@@ -135,6 +135,10 @@ function OnboardingPage() {
         body: JSON.stringify({
           pillars_count: plan.pillars.length,
           slots_count: plan.cadence.length,
+          pillars: plan.pillars,
+          purpose,
+          tone,
+          audienceStage,
         }),
       });
       const data = await resp.json();
@@ -158,12 +162,17 @@ function OnboardingPage() {
       const resp = await fetch("/api/onboarding/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: activeChannel, whenISO: when.toISOString() }),
+        body: JSON.stringify({
+          channel: activeChannel,
+          whenISO: when.toISOString(),
+          content: `My first post from QuillSocial onboarding! 🎉\n\nExcited to start sharing valuable content with my audience.`,
+          idea: "First onboarding post"
+        }),
       });
-      const data = (await resp.json()) as { draftId?: string };
+      const data = (await resp.json()) as { draftId?: string; postId?: number };
       setScheduledAt(when);
       setDraftId(data?.draftId || null);
-      PostHog.capture("onb_post_scheduled", { channel: activeChannel, whenISO: when.toISOString() });
+      PostHog.capture("onb_post_scheduled", { channel: activeChannel, whenISO: when.toISOString(), postId: data?.postId });
       showToast(`Scheduled on ${activeChannel} for ${when.toLocaleString()}`, "success");
       // Auto-advance after brief delay
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -194,14 +203,19 @@ function OnboardingPage() {
     setRepliesCount((c) => c + 1);
     setLastReplyCard(cardId);
     try {
+      const replyCard = replyCards.find(card => card.id === cardId);
       await fetch("/api/onboarding/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform, cardId }),
+        body: JSON.stringify({
+          platform,
+          cardId,
+          replyContent: `Great insight! Thanks for sharing.`
+        }),
       });
-      PostHog.capture("onb_reply_sent", { platform, cardId });
+      PostHog.capture("onb_reply_sent", { platform, cardId, author: replyCard?.author });
       if (repliesCount + 1 >= 3) {
-        showToast("Nice! 3 replies – you’re done.", "success");
+        showToast("Nice! 3 replies – you're done.", "success");
       }
       if (replyUndoTimerRef.current) clearTimeout(replyUndoTimerRef.current);
       replyUndoTimerRef.current = setTimeout(() => setLastReplyCard(null), 10000);

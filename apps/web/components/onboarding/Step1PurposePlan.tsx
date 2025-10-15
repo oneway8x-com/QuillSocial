@@ -33,11 +33,11 @@ export const Step1PurposePlan: React.FC<Step1PurposePlanProps> = ({
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
       {/* Welcome Banner */}
-      <div className="rounded-2xl border border-subtle bg-gradient-to-br from-brand-subtle/10 to-brand-default/5 p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 rounded-lg bg-brand-default p-2">
+          <div className="flex-shrink-0 rounded-xl bg-blue-500 p-3">
             <svg
-              className="h-6 w-6 text-brand-accent"
+              className="h-6 w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -51,8 +51,8 @@ export const Step1PurposePlan: React.FC<Step1PurposePlanProps> = ({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-emphasis">Post smarter in 5 minutes</h2>
-            <p className="mt-1 text-sm text-default">
+            <h2 className="text-lg font-semibold text-slate-900">Post smarter in 5 minutes</h2>
+            <p className="mt-1 text-sm text-slate-600">
               We'll set a plan, schedule one post, and start your reply habit. Let's begin by defining your purpose.
             </p>
           </div>
