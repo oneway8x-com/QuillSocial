@@ -101,3 +101,4 @@ stg-key.json
 ha-deployment.txt
 env.yaml
 notes.md
+apps/tests/__pycache__/moviepy.cpython-313.pyc

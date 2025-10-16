@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/Users/hadoan/Documents/GitHub/QuillSocial/apps/tests/moviepy_script.py", line 108, in <module>
+    base = bg_image_clip(seg["img"], seg["dur"])
+  File "/Users/hadoan/Documents/GitHub/QuillSocial/apps/tests/moviepy_script.py", line 59, in bg_image_clip
+    return c.set_duration(duration)
+           ^^^^^^^^^^^^^^
+AttributeError: 'Crop' object has no attribute 'set_duration'

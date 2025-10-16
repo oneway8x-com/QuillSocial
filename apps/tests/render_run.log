@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/hadoan/Documents/GitHub/QuillSocial/apps/tests/render_movie.py", line 1, in <module>
+    from moviepy.editor import (
+        ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, vfx
+    )
+  File "/Users/hadoan/Documents/GitHub/QuillSocial/apps/tests/moviepy.py", line 1, in <module>
+    from moviepy.editor import (
+        ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, vfx
+    )
+ModuleNotFoundError: No module named 'moviepy.editor'; 'moviepy' is not a package
