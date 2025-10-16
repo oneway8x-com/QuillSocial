@@ -3,7 +3,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
 import { useEffect, useState, useRef } from "react";
-import { Button } from "@quillsocial/ui";
+import { Button, showToast } from "@quillsocial/ui";
 import {
   Eye,
   EyeOff,
@@ -17,6 +17,7 @@ import {
   FileCode,
   Image as ImageIcon,
   Link as LinkIcon,
+  Copy,
 } from "@quillsocial/ui/components/icon";
 import { AddImageDialog } from "../common/AddImageDialog";
 
@@ -157,10 +158,35 @@ export function BlogMarkdownEditor({ value, onChange, placeholder }: BlogMarkdow
     }).run();
   };
 
-  // Check if an image is currently selected
-  const isImageSelected = editor?.isActive('image') ?? false;
+  // Function to copy markdown to clipboard
+  const handleCopyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(markdownContent);
+      showToast("Markdown copied to clipboard!", "success");
+    } catch (error) {
+      console.error("Failed to copy markdown:", error);
+      showToast("Failed to copy markdown to clipboard", "error");
+    }
+  };
 
-  if (!editor) {
+  // Function to copy HTML to clipboard
+  const handleCopyHTML = async () => {
+    try {
+      // Convert markdown to HTML
+      const html = renderMarkdownToHTML(markdownContent);
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(html);
+
+      showToast("HTML copied to clipboard!", "success");
+    } catch (error) {
+      console.error("Failed to copy HTML:", error);
+      showToast("Failed to copy HTML to clipboard", "error");
+    }
+  };
+
+  // Check if an image is currently selected
+  const isImageSelected = editor?.isActive('image') ?? false;  if (!editor) {
     return null;
   }
 
@@ -194,6 +220,27 @@ export function BlogMarkdownEditor({ value, onChange, placeholder }: BlogMarkdow
       <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
         {/* Toolbar */}
         <div className="border-b border-slate-200 bg-slate-50 p-2 flex items-center gap-1 flex-wrap">
+        {/* Copy buttons */}
+        <Button
+          type="button"
+          size="sm"
+          color="secondary"
+          onClick={handleCopyMarkdown}
+          StartIcon={Copy}
+          tooltip="Copy Markdown to clipboard"
+        >
+          Copy
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          color="secondary"
+          onClick={handleCopyHTML}
+          tooltip="Copy HTML to clipboard"
+        >
+          Copy HTML
+        </Button>
+        <div className="w-px h-6 bg-slate-300 mx-1" />
         <Button
           type="button"
           size="sm"
@@ -396,46 +443,112 @@ export function BlogMarkdownEditor({ value, onChange, placeholder }: BlogMarkdow
   );
 }
 
-// Simple markdown to HTML renderer for preview
+// Simple markdown to HTML renderer for preview and Medium compatibility
 function renderMarkdownToHTML(markdown: string): string {
   let html = markdown;
 
-  // Headers (H4, H3, H2, H1 - order matters!)
-  html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  // Split into lines for better processing
+  const lines = html.split('\n');
+  const processedLines: string[] = [];
+  let inCodeBlock = false;
+  let codeBlockContent: string[] = [];
+  let inList = false;
+  let listItems: string[] = [];
 
-  // Bold
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\_\_(.*?)\_\_/g, '<strong>$1</strong>');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
 
-  // Italic
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/\_(.*?)\_/g, '<em>$1</em>');
+    // Handle code blocks
+    if (line.trim().startsWith('```')) {
+      if (inCodeBlock) {
+        // End of code block
+        processedLines.push('<pre><code>' + codeBlockContent.join('\n') + '</code></pre>');
+        codeBlockContent = [];
+        inCodeBlock = false;
+      } else {
+        // Start of code block
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+
+    // Handle lists
+    const listMatch = line.match(/^[\*\-]\s+(.*)$/);
+    const orderedListMatch = line.match(/^\d+\.\s+(.*)$/);
+
+    if (listMatch || orderedListMatch) {
+      if (!inList) {
+        inList = true;
+        listItems = [];
+      }
+      const content = listMatch ? listMatch[1] : orderedListMatch![1];
+      listItems.push('<li>' + processInlineFormatting(content) + '</li>');
+      continue;
+    } else if (inList) {
+      // End of list
+      const listTag = line.match(/^\d+\./) ? 'ol' : 'ul';
+      processedLines.push(`<${listTag}>` + listItems.join('') + `</${listTag}>`);
+      listItems = [];
+      inList = false;
+    }
+
+    // Skip empty lines
+    if (line.trim() === '') {
+      processedLines.push('');
+      continue;
+    }
+
+    // Headers
+    if (line.startsWith('#### ')) {
+      processedLines.push('<h4>' + processInlineFormatting(line.slice(5)) + '</h4>');
+    } else if (line.startsWith('### ')) {
+      processedLines.push('<h3>' + processInlineFormatting(line.slice(4)) + '</h3>');
+    } else if (line.startsWith('## ')) {
+      processedLines.push('<h2>' + processInlineFormatting(line.slice(3)) + '</h2>');
+    } else if (line.startsWith('# ')) {
+      processedLines.push('<h1>' + processInlineFormatting(line.slice(2)) + '</h1>');
+    } else if (line.startsWith('> ')) {
+      // Blockquotes
+      processedLines.push('<blockquote>' + processInlineFormatting(line.slice(2)) + '</blockquote>');
+    } else {
+      // Regular paragraph
+      processedLines.push('<p>' + processInlineFormatting(line) + '</p>');
+    }
+  }
+
+  // Close any open list
+  if (inList) {
+    processedLines.push('<ul>' + listItems.join('') + '</ul>');
+  }
+
+  return processedLines.join('\n');
+}
+
+// Process inline formatting (bold, italic, links, images, code)
+function processInlineFormatting(text: string): string {
+  let result = text;
 
   // Images (must come before links)
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded" />');
+  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
 
   // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>');
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 
-  // Code blocks
-  html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-slate-100 p-4 rounded"><code>$1</code></pre>');
+  // Bold (** or __)
+  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  result = result.replace(/\_\_(.+?)\_\_/g, '<strong>$1</strong>');
+
+  // Italic (* or _) - must come after bold
+  result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  result = result.replace(/\_(.+?)\_/g, '<em>$1</em>');
 
   // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1 rounded">$1</code>');
+  result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Blockquotes
-  html = html.replace(/^&gt; (.*$)/gim, '<blockquote class="border-l-4 border-slate-300 pl-4 italic">$1</blockquote>');
-
-  // Lists
-  html = html.replace(/^\* (.*)$/gim, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul class="list-disc list-inside">$1</ul>');
-
-  // Paragraphs
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = '<p>' + html + '</p>';
-
-  return html;
+  return result;
 }

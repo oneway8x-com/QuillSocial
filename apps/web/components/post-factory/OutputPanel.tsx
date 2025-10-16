@@ -330,9 +330,34 @@ const OutputPanel: React.FC<Props> = ({
       return;
     }
 
-    showToast("Scheduling LinkedIn post...", "success");
-    // TODO: Implement actual scheduling logic
-    setIsLinkedinScheduleOpen(false);
+    if (!currentPostId) {
+      showToast("Post ID is missing", "error");
+      return;
+    }
+
+    try {
+      showToast("Scheduling LinkedIn post...", "success");
+
+      const response = await fetch("/api/posts/schedulePost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: currentPostId,
+          scheduleDay: linkedinScheduleDateTime,
+        }),
+      });
+
+      if (response.ok) {
+        showToast("LinkedIn post scheduled successfully!", "success");
+        setIsLinkedinScheduleOpen(false);
+      } else {
+        showToast("Failed to schedule LinkedIn post", "error");
+      }
+    } catch (err) {
+      console.error("Schedule error:", err);
+      showToast("Failed to schedule LinkedIn post", "error");
+    }
   };
 
   const handleXPublish = async () => {
@@ -402,9 +427,34 @@ const OutputPanel: React.FC<Props> = ({
       return;
     }
 
-    showToast("Scheduling X post...", "success");
-    // TODO: Implement actual scheduling logic
-    setIsXScheduleOpen(false);
+    if (!currentPostId) {
+      showToast("Post ID is missing", "error");
+      return;
+    }
+
+    try {
+      showToast("Scheduling X post...", "success");
+
+      const response = await fetch("/api/posts/schedulePost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: currentPostId,
+          scheduleDay: xScheduleDateTime,
+        }),
+      });
+
+      if (response.ok) {
+        showToast("X post scheduled successfully!", "success");
+        setIsXScheduleOpen(false);
+      } else {
+        showToast("Failed to schedule X post", "error");
+      }
+    } catch (err) {
+      console.error("Schedule error:", err);
+      showToast("Failed to schedule X post", "error");
+    }
   };
 
   const handleLinkedinPdfSchedule = () => {

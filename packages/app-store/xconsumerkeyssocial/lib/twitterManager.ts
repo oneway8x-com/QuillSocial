@@ -415,6 +415,15 @@ export const post = async (
       };
     }
 
+    // Check if this post has thread content - if so, delegate to postThread
+    const outputs = (twitterPost.multiPlatformOutputs || twitterPost.result || null) as any;
+    if (outputs?.x && Array.isArray(outputs.x) && outputs.x.length > 1) {
+      log.info("Detected thread content with multiple items, delegating to postThread", {
+        threadLength: outputs.x.length
+      });
+      return postThread(postId, credentialId);
+    }
+
     // Post directly using the consumer keys + user access tokens
     try {
       const tweetText = twitterPost.content;
