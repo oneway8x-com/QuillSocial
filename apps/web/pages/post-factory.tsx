@@ -1,4 +1,8 @@
 import PageWrapper from "@components/PageWrapper";
+import { BlogMarkdownEditor } from "@components/blog-editor/BlogMarkdownEditor";
+import InputPanel from "@components/post-factory/InputPanel";
+import OutputPanel from "@components/post-factory/OutputPanel";
+import { parseXThread } from "@components/post-factory/utils";
 import Shell from "@quillsocial/features/shell/Shell";
 import { useLocale } from "@quillsocial/lib/hooks/useLocale";
 import { trpc } from "@quillsocial/trpc/react";
@@ -11,11 +15,7 @@ import {
   Wand,
 } from "@quillsocial/ui/components/icon";
 import { useRouter } from "next/router";
-import React, { useState, useEffect } from "react";
-import { BlogMarkdownEditor } from "@components/blog-editor/BlogMarkdownEditor";
-import InputPanel from "@components/post-factory/InputPanel";
-import OutputPanel from "@components/post-factory/OutputPanel";
-import { parseXThread } from "@components/post-factory/utils";
+import React, { useState, useEffect, useRef } from "react";
 
 // Helper function to parse X/Twitter thread content into individual tweets
 // parseXThread is now in utils and imported above
@@ -54,8 +54,16 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
   // Fetch existing post data if ideaId is provided
   const { data: existingPost } = trpc.viewer.postFactory.getPost.useQuery(
     { ideaId: typeof ideaId === "string" ? ideaId : undefined },
-    { enabled: !!ideaId }
+    {
+      enabled: !!ideaId,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
   );
+
+  // Track if we've already loaded a post to prevent duplicate toasts
+  const loadedPostRef = useRef<string | null>(null);
 
   // Load outline from idea when data is available
   useEffect(() => {
@@ -64,6 +72,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
 
       // First, check if there's an existing post to load
       if (existingPost) {
+        const postKey = `${
+          existingPost.postId
+        }-${existingPost.createdAt.getTime()}`;
+        const isNewLoad = loadedPostRef.current !== postKey;
+
         setOutline(existingPost.outline);
         if (existingPost.tone) {
           setTone(
@@ -73,11 +86,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         if (existingPost.outputs) {
           // Handle new format where x and carousel might be arrays
           const xContent = Array.isArray(existingPost.outputs.x)
-            ? existingPost.outputs.x.join('\n\n')
+            ? existingPost.outputs.x.join("\n\n")
             : existingPost.outputs.x || "";
 
           const carouselContent = Array.isArray(existingPost.outputs.carousel)
-            ? existingPost.outputs.carousel.join('\n\n')
+            ? existingPost.outputs.carousel.join("\n\n")
             : existingPost.outputs.carousel || "";
 
           setOutputs({
@@ -110,7 +123,12 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         if (existingPost.utm) {
           setUtm(existingPost.utm);
         }
-        showToast("Loaded saved post from database", "success");
+
+        // Only show toast if this is a new load (not a re-render)
+        if (isNewLoad) {
+          loadedPostRef.current = postKey;
+          showToast("Loaded saved post from database", "success");
+        }
       } else if (idea?.outline) {
         // If no existing post, load from outline
         setOutline(idea.outline.text);
@@ -123,17 +141,17 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         showToast("Loaded outline from idea", "success");
       } else if (idea) {
         // Use the idea title as a starting point
-          setOutline(idea.title);
-          showToast(
-            "Loaded idea. You can expand it to an outline first.",
-            "success"
-          );
+        setOutline(idea.title);
+        showToast(
+          "Loaded idea. You can expand it to an outline first.",
+          "success"
+        );
       }
     } else if (!ideaId) {
       // Reset form when no ideaId
       setOutline("");
       setTone("authoritative");
-        setSelectedPlatforms(["linkedin", "x", "carousel", "shorts", "blog"]);
+      setSelectedPlatforms(["linkedin", "x", "carousel", "shorts", "blog"]);
       setCta("");
       setUtm("?utm_source=li&utm_medium=post");
       setOutputs({
@@ -170,11 +188,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
     onSuccess: (data) => {
       // Handle new format where x and carousel are arrays
       const xContent = Array.isArray(data.outputs.x)
-        ? data.outputs.x.join('\n\n')
+        ? data.outputs.x.join("\n\n")
         : data.outputs.x || "";
 
       const carouselContent = Array.isArray(data.outputs.carousel)
-        ? data.outputs.carousel.join('\n\n')
+        ? data.outputs.carousel.join("\n\n")
         : data.outputs.carousel || "";
 
       setOutputs({
@@ -234,13 +252,17 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
     onSuccess: (data) => {
       // Handle new format where x and carousel are arrays
       const content = Array.isArray(data.content)
-        ? data.content.join('\n\n')
+        ? data.content.join("\n\n")
         : data.content;
 
-      setOutputs((prev) => ({
-        ...prev,
+      // Build the outputs object we'll show in the UI (string form for display)
+      const displayOutputs = {
+        ...outputs,
         [data.platform]: content,
-      }));
+      };
+
+      // Update UI state
+      setOutputs(displayOutputs);
 
       // Parse X thread into individual items if regenerating X
       if (data.platform === "x" && data.content) {
@@ -257,6 +279,47 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
           : [data.content as string];
         setCarouselSlides(slides);
       }
+
+      // Prepare outputs for saving. For channels that return arrays (x/carousel),
+      // keep the array form when available so the DB stores the richer shape.
+      const outputsToSave: Record<string, string | string[] | undefined> = {
+        ...outputs,
+        [data.platform]: data.content as any,
+      };
+
+      // If we regenerated X and parsed thread items, prefer saving the thread items array
+      if (data.platform === "x") {
+        const threadItems = Array.isArray(data.content)
+          ? data.content
+          : data.content
+          ? parseXThread(data.content as string)
+          : [];
+        if (threadItems.length > 0) {
+          outputsToSave.x = threadItems;
+        }
+      }
+
+      // If we regenerated carousel, prefer saving slides as an array
+      if (data.platform === "carousel") {
+        const slides = Array.isArray(data.content)
+          ? data.content
+          : data.content
+          ? [data.content as string]
+          : [];
+        if (slides.length > 0) {
+          outputsToSave.carousel = slides;
+        }
+      }
+
+      // Call save mutation to persist the single-platform update
+      saveGeneratedPostsMutation.mutate({
+        outline,
+        tone,
+        outputs: outputsToSave as any,
+        cta,
+        utm,
+        ideaId: typeof ideaId === "string" ? ideaId : undefined,
+      });
 
       showToast(`${data.platform} content regenerated!`, "success");
     },
@@ -296,10 +359,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
       return;
     }
 
+    // Always generate for all supported platforms regardless of selection
     generateAllMutation.mutate({
       outline,
       tone,
-      platforms: selectedPlatforms,
+      platforms: ["linkedin", "x", "carousel", "blog"], //disable shorts for now
       cta,
       utm,
     });
@@ -341,6 +405,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
       outputsToSave.x = xThreadItems;
     }
 
+    // If user edited carousel slides, save as an array so DB stores slide items
+    if (carouselSlides && carouselSlides.length > 0) {
+      outputsToSave.carousel = carouselSlides;
+    }
+
     saveGeneratedPostsMutation.mutate({
       outline,
       tone,
@@ -364,7 +433,11 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         subtitle="One outline → multi-format outputs"
         CTA={
           <div className="flex gap-3">
-            <Button color="secondary" StartIcon={Save} onClick={() => handleSaveEdits()}>
+            <Button
+              color="secondary"
+              StartIcon={Save}
+              onClick={() => handleSaveEdits()}
+            >
               {t("Save Draft")}
             </Button>
             <Button StartIcon={CalendarDays} onClick={handleSchedule}>
@@ -393,7 +466,7 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             outputs={outputs}
-            setOutputs={(o) => setOutputs(o)}
+            setOutputs={setOutputs}
             xThreadItems={xThreadItems}
             setXThreadItems={setXThreadItems}
             carouselSlides={carouselSlides}

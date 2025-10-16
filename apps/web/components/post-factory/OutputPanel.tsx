@@ -5,12 +5,15 @@ import { BlogMarkdownEditor } from "@components/blog-editor/BlogMarkdownEditor";
 import { trpc } from "@quillsocial/trpc/react";
 import { InstallAppButtonWithoutPlanCheck } from "@quillsocial/app-store/components";
 import SocialAvatar from "@quillsocial/features/shell/SocialAvatar";
+import { ScheduleDialog } from "@components/write/ScheduleDialog";
+import type { PluginType } from "@components/write/ScheduleDialog";
 
 type Outputs = {
   linkedin: string;
   x: string;
   carousel: string;
   shorts: string;
+  // shorts: string;
   blog: string;
 };
 
@@ -32,7 +35,7 @@ const tabs = [
   { id: "linkedin", name: "LinkedIn" },
   { id: "x", name: "X Thread" },
   { id: "carousel", name: "IG Carousel" },
-  { id: "shorts", name: "Shorts" },
+  // { id: "shorts", name: "Shorts" },
   { id: "blog", name: "Blog" },
 ];
 
@@ -49,27 +52,28 @@ const OutputPanel: React.FC<Props> = ({
   handleCopy,
   handleRegenerate,
 }) => {
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isLinkedinScheduleOpen, setIsLinkedinScheduleOpen] = useState(false);
+  const [isXScheduleOpen, setIsXScheduleOpen] = useState(false);
+  const [linkedinScheduleDateTime, setLinkedinScheduleDateTime] = useState("");
+  const [xScheduleDateTime, setXScheduleDateTime] = useState("");
 
-  // Query LinkedIn integration status
-  const { data: linkedinIntegration, isLoading: linkedinLoading } = trpc.viewer.integrations.useQuery({
-    variant: "social",
-    onlyInstalled: false,
-    slug: "linkedin-social",
-  });
-
-  // Get social accounts to find LinkedIn account
+  // Get social accounts - single query for all accounts
   const { data: socialAccounts } = trpc.viewer.socials.getSocialNetWorking.useQuery();
 
+  // Derive LinkedIn and X account info from socialAccounts
   const linkedinAccount = socialAccounts?.find(
     (account) => account.appId === "linkedin-social"
   );
 
-  const hasLinkedinAccount = linkedinIntegration?.items?.some(
-    (item) => item.credentialIds.length > 0
+  const xAccount = socialAccounts?.find(
+    (account) => account.appId === "xconsumerkeys-social"
   );
 
-  const handlePublish = async () => {
+  // Check if accounts are connected (have credentials)
+  const hasLinkedinAccount = !!linkedinAccount?.credentialId;
+  const hasXAccount = !!xAccount?.credentialId;
+
+  const handleLinkedinPublish = async () => {
     if (!linkedinAccount) {
       showToast("Please connect a LinkedIn account first", "error");
       return;
@@ -84,7 +88,7 @@ const OutputPanel: React.FC<Props> = ({
     // TODO: Implement actual publishing logic
   };
 
-  const handleSchedule = () => {
+  const handleLinkedinSchedule = () => {
     if (!linkedinAccount) {
       showToast("Please connect a LinkedIn account first", "error");
       return;
@@ -95,8 +99,58 @@ const OutputPanel: React.FC<Props> = ({
       return;
     }
 
-    setIsScheduleOpen(true);
-    // TODO: Open schedule dialog
+    setIsLinkedinScheduleOpen(true);
+  };
+
+  const handleLinkedinScheduleUpdate = async (pluginData?: PluginType) => {
+    if (!linkedinScheduleDateTime) {
+      showToast("Please select a date and time", "error");
+      return;
+    }
+
+    showToast("Scheduling LinkedIn post...", "success");
+    // TODO: Implement actual scheduling logic
+    setIsLinkedinScheduleOpen(false);
+  };
+
+  const handleXPublish = async () => {
+    if (!xAccount) {
+      showToast("Please connect an X account first", "error");
+      return;
+    }
+
+    if (!outputs.x?.trim() && xThreadItems.length === 0) {
+      showToast("Please generate X content first", "error");
+      return;
+    }
+
+    showToast("Publishing to X...", "success");
+    // TODO: Implement actual publishing logic
+  };
+
+  const handleXSchedule = () => {
+    if (!xAccount) {
+      showToast("Please connect an X account first", "error");
+      return;
+    }
+
+    if (!outputs.x?.trim() && xThreadItems.length === 0) {
+      showToast("Please generate X content first", "error");
+      return;
+    }
+
+    setIsXScheduleOpen(true);
+  };
+
+  const handleXScheduleUpdate = async (pluginData?: PluginType) => {
+    if (!xScheduleDateTime) {
+      showToast("Please select a date and time", "error");
+      return;
+    }
+
+    showToast("Scheduling X post...", "success");
+    // TODO: Implement actual scheduling logic
+    setIsXScheduleOpen(false);
   };
 
   const handleInstallLinkedIn = async () => {
@@ -108,6 +162,18 @@ const OutputPanel: React.FC<Props> = ({
       }
     } catch (error) {
       showToast("Failed to initiate LinkedIn installation", "error");
+    }
+  };
+
+  const handleInstallX = async () => {
+    try {
+      const response = await fetch("/api/integrations/xconsumerkeyssocial/add");
+      const data = await response.json();
+      if (data.url) {
+        window.open(data.url, "_self");
+      }
+    } catch (error) {
+      showToast("Failed to initiate X installation", "error");
     }
   };
 
@@ -207,57 +273,107 @@ const OutputPanel: React.FC<Props> = ({
         {/* LinkedIn-specific actions */}
         {activeTab === "linkedin" && (
           <div className="mb-4">
-            {!linkedinLoading && (
-              <>
-                {hasLinkedinAccount && linkedinAccount ? (
-                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-                    {/* LinkedIn Account Info */}
-                    <SocialAvatar
-                      avatarUrl={linkedinAccount.avatarUrl || ""}
-                      name={linkedinAccount.name}
-                      appId={linkedinAccount.appId}
-                      size="md"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{linkedinAccount.name}</p>
-                      <p className="text-xs text-slate-600 truncate">{linkedinAccount.emailOrUserName}</p>
-                    </div>
+            {hasLinkedinAccount && linkedinAccount ? (
+              <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                {/* LinkedIn Account Info */}
+                <SocialAvatar
+                  avatarUrl={linkedinAccount.avatarUrl || ""}
+                  name={linkedinAccount.name}
+                  appId={linkedinAccount.appId}
+                  size="md"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{linkedinAccount.name}</p>
+                  <p className="text-xs text-slate-600 truncate">{linkedinAccount.emailOrUserName}</p>
+                </div>
 
-                    {/* Publish & Schedule Buttons */}
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        className="rounded-xl px-4 py-2"
-                        onClick={handlePublish}
-                        StartIcon={Send}
-                        disabled={!outputs.linkedin?.trim()}
-                        size="sm"
-                      >
-                        Publish
-                      </Button>
-                      <Button
-                        className="rounded-xl px-4 py-2"
-                        color="secondary"
-                        onClick={handleSchedule}
-                        StartIcon={Calendar}
-                        disabled={!outputs.linkedin?.trim()}
-                        size="sm"
-                      >
-                        Schedule
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 text-center">
-                    <p className="text-sm text-slate-600 mb-3">Connect your LinkedIn account to publish posts</p>
-                    <Button
-                      className="rounded-xl px-6"
-                      onClick={handleInstallLinkedIn}
-                    >
-                      Install LinkedIn
-                    </Button>
-                  </div>
-                )}
-              </>
+                {/* Publish & Schedule Buttons */}
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button
+                    className="rounded-xl px-4 py-2"
+                    onClick={handleLinkedinPublish}
+                    StartIcon={Send}
+                    disabled={!outputs.linkedin?.trim()}
+                    size="sm"
+                  >
+                    Publish
+                  </Button>
+                  <Button
+                    className="rounded-xl px-4 py-2"
+                    color="secondary"
+                    onClick={handleLinkedinSchedule}
+                    StartIcon={Calendar}
+                    disabled={!outputs.linkedin?.trim()}
+                    size="sm"
+                  >
+                    Schedule
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 text-center">
+                <p className="text-sm text-slate-600 mb-3">Connect your LinkedIn account to publish posts</p>
+                <Button
+                  className="rounded-xl px-6"
+                  onClick={handleInstallLinkedIn}
+                >
+                  Install LinkedIn
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* X-specific actions */}
+        {activeTab === "x" && (
+          <div className="mb-4">
+            {hasXAccount && xAccount ? (
+              <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl border border-sky-200 shadow-sm">
+                {/* X Account Info */}
+                <SocialAvatar
+                  avatarUrl={xAccount.avatarUrl || ""}
+                  name={xAccount.name}
+                  appId={xAccount.appId}
+                  size="md"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{xAccount.name}</p>
+                  <p className="text-xs text-slate-600 truncate">{xAccount.emailOrUserName}</p>
+                </div>
+
+                {/* Publish & Schedule Buttons */}
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button
+                    className="rounded-xl px-4 py-2"
+                    onClick={handleXPublish}
+                    StartIcon={Send}
+                    disabled={!outputs.x?.trim() && xThreadItems.length === 0}
+                    size="sm"
+                  >
+                    Publish
+                  </Button>
+                  <Button
+                    className="rounded-xl px-4 py-2"
+                    color="secondary"
+                    onClick={handleXSchedule}
+                    StartIcon={Calendar}
+                    disabled={!outputs.x?.trim() && xThreadItems.length === 0}
+                    size="sm"
+                  >
+                    Schedule
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 text-center">
+                <p className="text-sm text-slate-600 mb-3">Connect your X account to publish posts</p>
+                <Button
+                  className="rounded-xl px-6"
+                  onClick={handleInstallX}
+                >
+                  Install X
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -267,6 +383,24 @@ const OutputPanel: React.FC<Props> = ({
           <Button className="rounded-xl" color="secondary" onClick={handleRegenerate} StartIcon={Wand} loading={regenerateLoading} disabled={regenerateLoading}>{regenerateLoading ? "Regenerating..." : "Regenerate"}</Button>
         </div>
       </div>
+
+      {/* LinkedIn Schedule Dialog */}
+      <ScheduleDialog
+        open={isLinkedinScheduleOpen}
+        onClose={() => setIsLinkedinScheduleOpen(false)}
+        onDateTimeChange={(value: string) => setLinkedinScheduleDateTime(value)}
+        onUpdate={handleLinkedinScheduleUpdate}
+        appId="linkedin-social"
+      />
+
+      {/* X Schedule Dialog */}
+      <ScheduleDialog
+        open={isXScheduleOpen}
+        onClose={() => setIsXScheduleOpen(false)}
+        onDateTimeChange={(value: string) => setXScheduleDateTime(value)}
+        onUpdate={handleXScheduleUpdate}
+        appId="xconsumerkeys-social"
+      />
     </div>
   );
 };

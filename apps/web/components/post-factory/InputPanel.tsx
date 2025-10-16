@@ -46,7 +46,11 @@ const InputPanel: React.FC<Props> = ({
           loading={generateLoading}
           disabled={generateLoading}
         >
-          {generateLoading ? "Generating..." : "Generate"}
+          {generateLoading
+            ? "Generating all..."
+            : selectedPlatforms.length > 1
+            ? "Generate all platforms"
+            : "Generate all"}
         </Button>
       </div>
 
