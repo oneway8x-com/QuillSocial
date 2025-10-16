@@ -2,8 +2,8 @@
   "name": "@quillsocial/docs-render",
   "private": true,
   "version": "0.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "license": "MIT",
   "bin": {
     "quill-carousel": "dist/src/cli.js"
@@ -11,8 +11,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.carousel.json",
     "test": "vitest run",
-  "render:images": "node dist/src/cli.js images --in examples/sample.json --out out/ig",
-  "render:pdf": "node dist/src/cli.js pdf --in examples/sample.json --out out/linkedin.pdf"
+    "render:images": "node dist/src/cli.js images --in examples/sample.json --out out/ig",
+    "render:pdf": "node dist/src/cli.js pdf --in examples/sample.json --out out/linkedin.pdf"
   },
   "dependencies": {
     "commander": "^10.0.0",

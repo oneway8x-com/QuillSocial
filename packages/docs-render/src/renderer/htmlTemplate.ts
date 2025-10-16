@@ -2,7 +2,7 @@ import { Slide, BrandTheme } from "../types";
 import { escapeHtml, normalizeBullet } from "../utils/text";
 
 export function toHTML(slide: Slide, brand?: BrandTheme, size?: { width: number; height: number }) {
-  const b = brand || { bg: "#F8F7FF", fg: "#1A1A2E", accent: "#7C3AED", logoText: "Your Brand", padding: 72 };
+  const b = brand || { bg: "#F8F7FF", fg: "#1A1A2E", accent: "#7C3AED", logoText: "QuillSocial", padding: 72 };
   const padding = b.padding ?? 72;
   const heading = escapeHtml(slide.heading);
   const sub = slide.subheading ? `<div class="sub">${escapeHtml(slide.subheading)}</div>` : "";

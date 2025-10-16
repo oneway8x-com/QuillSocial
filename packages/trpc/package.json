@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@quill/agent": "*",
+    "@quillsocial/docs-render": "*",
     "@quillsocial/prisma": "*",
     "@tanstack/react-query": "^4.3.9",
     "@trpc/client": "^10.13.0",

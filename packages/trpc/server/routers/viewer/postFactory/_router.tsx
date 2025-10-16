@@ -5,6 +5,7 @@ import { ZGenerateAllInputSchema } from "./generateAll.schema";
 import { ZGetPostByIdeaSchema } from "./getPost.schema";
 import { ZRegenerateInputSchema } from "./regenerate.schema";
 import { ZSaveGeneratedPostsSchema } from "./saveGeneratedPosts.schema";
+import { ZGenerateCarouselInputSchema } from "./generateCarousel.schema";
 
 type PostFactoryRouterHandlerCache = {
   generateAll?: typeof import("./generateAll.handler").generateAllHandler;
@@ -12,6 +13,7 @@ type PostFactoryRouterHandlerCache = {
   regenerate?: typeof import("./regenerate.handler").regenerateHandler;
   saveGeneratedPosts?: typeof import("./saveGeneratedPosts.handler").saveGeneratedPostsHandler;
   getPost?: typeof import("./getPost.handler").getPostHandler;
+  generateCarousel?: typeof import("./generateCarousel.handler").generateCarouselHandler;
 };
 
 const UNSTABLE_HANDLER_CACHE: PostFactoryRouterHandlerCache = {};
@@ -107,6 +109,25 @@ export const postFactoryRouter = router({
       }
 
       return UNSTABLE_HANDLER_CACHE.getPost({
+        ctx,
+        input,
+      });
+    }),
+
+  generateCarousel: authedProcedure
+    .input(ZGenerateCarouselInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      if (!UNSTABLE_HANDLER_CACHE.generateCarousel) {
+        UNSTABLE_HANDLER_CACHE.generateCarousel = await import(
+          "./generateCarousel.handler"
+        ).then((mod) => mod.generateCarouselHandler);
+      }
+
+      if (!UNSTABLE_HANDLER_CACHE.generateCarousel) {
+        throw new Error("Failed to load handler");
+      }
+
+      return UNSTABLE_HANDLER_CACHE.generateCarousel({
         ctx,
         input,
       });

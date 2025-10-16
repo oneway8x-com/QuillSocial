@@ -5,6 +5,7 @@ import { PageInfoData } from "./type";
 import prisma from "@quillsocial/prisma";
 import axios from "axios";
 import logger from "@quillsocial/lib/logger";
+import { getFile } from "@quillsocial/app-store/googlecloudstorage/lib/getFile";
 
 /** ===== Version handling (REST header: LinkedIn-Version) ===== */
 const _rawLinkedInVersion =
@@ -161,6 +162,134 @@ export const post = async (postId: number) => {
   } catch (error) {
     await prisma.post.update({ where: { id: postId }, data: { status: "ERROR" } });
     console.error(error);
+    return false;
+  }
+};
+
+/** ===== Post PDF flow ===== */
+export const postPdf = async (postId: number, credentialId: number, title?: string) => {
+  try {
+    console.log("[postPdf] Starting PDF post flow", { postId, credentialId, title });
+
+    const linkedInPost = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        cloudFiles: { include: { cloudFile: true } },
+      },
+    });
+
+    console.log("[postPdf] Post found", {
+      hasPost: !!linkedInPost,
+      providedCredentialId: credentialId,
+      cloudFilesCount: linkedInPost?.cloudFiles?.length
+    });
+
+    if (!linkedInPost) {
+      console.log("[postPdf] Post not found");
+      return false;
+    }
+
+    // find associated PDF cloud file
+    const pdfCf = linkedInPost.cloudFiles?.map((pcf) => pcf.cloudFile).find((cf) => cf?.fileExt === "pdf");
+
+    console.log("[postPdf] PDF CloudFile search", {
+      found: !!pdfCf,
+      cloudFileId: pdfCf?.cloudFileId,
+      fileExt: pdfCf?.fileExt
+    });
+
+    if (!pdfCf) {
+      console.log("[postPdf] No PDF cloud file found");
+      return false;
+    }
+
+    // Get signed URL for PDF
+    const pdfFileName = `${pdfCf.cloudFileId}.${pdfCf.fileExt}`;
+    console.log("[postPdf] Getting signed URL for", pdfFileName);
+
+    const signedUrl = await getFile(pdfFileName);
+
+    console.log("[postPdf] Signed URL result", { hasUrl: !!signedUrl });
+
+    if (!signedUrl) {
+      console.log("[postPdf] Failed to get signed URL");
+      return false;
+    }
+
+    const accessToken = await getClient(credentialId);
+
+    console.log("[postPdf] Access token retrieved", { hasToken: !!accessToken });
+
+    if (!accessToken) {
+      console.log("[postPdf] No access token");
+      await prisma.post.update({ where: { id: postId }, data: { status: "ERROR" } });
+      return false;
+    }
+
+    // Get credential to check for pageId
+    const credential = await prisma.credential.findUnique({
+      where: { id: credentialId },
+    });
+
+    // Resolve author URN (page or person)
+    let authorUrn = credential?.currentPageId || linkedInPost.pageId;
+    if (!authorUrn) {
+      const me = await getUserProfile(accessToken as string);
+      authorUrn = `urn:li:person:${me.sub}`;
+    }
+
+    console.log("[postPdf] Author URN", { authorUrn });
+
+    // Build a post payload with article content for the PDF link
+    // LinkedIn REST API supports 'article' content type for external links
+    const postData: any = {
+      author: authorUrn,
+      commentary: `${title || linkedInPost.idea || ""}\n\n${linkedInPost.content || ""}`.trim(),
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
+      lifecycleState: "PUBLISHED",
+      content: {
+        article: {
+          source: signedUrl,
+          title: title || linkedInPost.idea || "Document",
+          description: linkedInPost.content || "",
+        },
+      },
+    };
+
+    console.log("[postPdf] Posting to LinkedIn with article content:", {
+      title: title || linkedInPost.idea,
+      pdfUrl: signedUrl
+    });
+
+    const response = await postLinkedInPost(accessToken as string, postData);
+
+    console.log("[postPdf] LinkedIn API response", { hasResponse: !!response, response });
+
+    if (!response) {
+      console.log("[postPdf] LinkedIn post failed");
+      await prisma.post.update({ where: { id: postId }, data: { status: "ERROR" } });
+      return false;
+    }
+
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        status: "POSTED",
+        postedDate: new Date(),
+        result: { shareId: response },
+      },
+    });
+
+    console.log("[postPdf] Successfully posted PDF to LinkedIn");
+    return true;
+  } catch (error) {
+    console.error("[postPdf] Error in postPdf flow:", error);
+    await prisma.post.update({ where: { id: postId }, data: { status: "ERROR" } });
     return false;
   }
 };
@@ -328,6 +457,35 @@ const uploadImage = async (token: string, imgSrc: string, uploadUrl: string) => 
   const fileStream = dataURLToStream(imgSrc);
   const response = await axios.post(uploadUrl, fileStream, { headers });
   return response.status === 201;
+};
+
+/** ===== Document Upload (for PDF carousel) ===== */
+const initializeDocumentUpload = async (accessToken: string, owner: string, title: string) => {
+  const url = "https://api.linkedin.com/rest/documents?action=initializeUpload";
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "LinkedIn-Version": LINKEDIN_API_VERSION,
+    "X-Restli-Protocol-Version": "2.0.0",
+    "Content-Type": "application/json",
+  };
+  const data = {
+    initializeUploadRequest: {
+      owner,
+      fileSizeBytes: 104857600, // 100MB max
+      uploadType: "DOCUMENT",
+    },
+  };
+  const response = await axios.post(url, data, { headers });
+  return response.data;
+};
+
+const uploadDocument = async (token: string, pdfBuffer: Buffer, uploadUrl: string) => {
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/pdf",
+  };
+  const response = await axios.put(uploadUrl, pdfBuffer, { headers });
+  return response.status === 200 || response.status === 201;
 };
 
 async function postLinkedInPost(token: string, postData: any) {

@@ -36,7 +36,7 @@ export const DEFAULT_BRAND: BrandTheme = {
   bg: "#F8F7FF",
   fg: "#1A1A2E",
   accent: "#7C3AED",
-  logoText: "Your Brand",
+  logoText: "QuillSocial",
   padding: 72,
 };
 

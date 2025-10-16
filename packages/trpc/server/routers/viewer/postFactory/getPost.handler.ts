@@ -21,6 +21,13 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
         id: postId,
         userId: user.id,
       },
+      include: {
+        cloudFiles: {
+          include: {
+            cloudFile: true,
+          },
+        },
+      },
       orderBy: {
         createdDate: "desc",
       },
@@ -36,6 +43,7 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
       multiPlatformOutputs: post.multiPlatformOutputs,
       xIsArray: Array.isArray((post.multiPlatformOutputs as any)?.x),
       xType: typeof (post.multiPlatformOutputs as any)?.x,
+      cloudFilesCount: post.cloudFiles.length,
     });
 
     return {
@@ -48,6 +56,12 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
       ideaId: post.ideaId,
       status: post.status,
       createdAt: post.createdDate,
+      cloudFiles: post.cloudFiles.map((pcf) => ({
+        id: pcf.cloudFile?.id || 0,
+        cloudFileId: pcf.cloudFile?.cloudFileId || "",
+        fileExt: pcf.cloudFile?.fileExt || "",
+        fileName: pcf.cloudFile?.fileName || "",
+      })),
     };
   }
 
@@ -59,6 +73,13 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
         userId: user.id,
         multiPlatformOutputs: {
           not: Prisma.JsonNull, // Only posts created from post factory
+        },
+      },
+      include: {
+        cloudFiles: {
+          include: {
+            cloudFile: true,
+          },
         },
       },
       orderBy: {
@@ -77,6 +98,7 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
       multiPlatformOutputs: post.multiPlatformOutputs,
       xIsArray: Array.isArray((post.multiPlatformOutputs as any)?.x),
       xType: typeof (post.multiPlatformOutputs as any)?.x,
+      cloudFilesCount: post.cloudFiles.length,
     });
 
     return {
@@ -89,6 +111,12 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
       ideaId: post.ideaId,
       status: post.status,
       createdAt: post.createdDate,
+      cloudFiles: post.cloudFiles.map((pcf) => ({
+        id: pcf.cloudFile?.id || 0,
+        cloudFileId: pcf.cloudFile?.cloudFileId || "",
+        fileExt: pcf.cloudFile?.fileExt || "",
+        fileName: pcf.cloudFile?.fileName || "",
+      })),
     };
   }
 
@@ -100,10 +128,17 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
         not: Prisma.JsonNull, // Only posts created from post factory
       },
     },
-      orderBy: {
-        createdDate: "desc",
+    include: {
+      cloudFiles: {
+        include: {
+          cloudFile: true,
+        },
       },
-    });
+    },
+    orderBy: {
+      createdDate: "desc",
+    },
+  });
 
   if (!post) {
     return null;
@@ -115,6 +150,7 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
     multiPlatformOutputs: post.multiPlatformOutputs,
     xIsArray: Array.isArray((post.multiPlatformOutputs as any)?.x),
     xType: typeof (post.multiPlatformOutputs as any)?.x,
+    cloudFilesCount: post.cloudFiles.length,
   });
 
   return {
@@ -127,5 +163,11 @@ export const getPostHandler = async ({ ctx, input }: GetPostHandlerOptions) => {
     ideaId: post.ideaId,
     status: post.status,
     createdAt: post.createdDate,
+    cloudFiles: post.cloudFiles.map((pcf) => ({
+      id: pcf.cloudFile?.id || 0,
+      cloudFileId: pcf.cloudFile?.cloudFileId || "",
+      fileExt: pcf.cloudFile?.fileExt || "",
+      fileName: pcf.cloudFile?.fileName || "",
+    })),
   };
 };

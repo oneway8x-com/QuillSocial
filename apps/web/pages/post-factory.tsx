@@ -44,6 +44,13 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
   >(["linkedin", "x", "carousel", "shorts", "blog"]);
   const [xThreadItems, setXThreadItems] = useState<string[]>([]);
   const [carouselSlides, setCarouselSlides] = useState<string[]>([]);
+  const [currentPostId, setCurrentPostId] = useState<number | undefined>(undefined);
+  const [savedCloudFiles, setSavedCloudFiles] = useState<Array<{
+    id: number;
+    cloudFileId: string;
+    fileExt: string;
+    fileName: string;
+  }>>([]);
 
   // Fetch idea from ideas-pillars if ideaId is provided
   const { data: ideas } = trpc.viewer.ideasPillars.listIdeas.useQuery(
@@ -77,6 +84,7 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
         }-${existingPost.createdAt.getTime()}`;
         const isNewLoad = loadedPostRef.current !== postKey;
 
+        setCurrentPostId(existingPost.postId);
         setOutline(existingPost.outline);
         if (existingPost.tone) {
           setTone(
@@ -117,6 +125,12 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
             setCarouselSlides(slides);
           }
         }
+
+        // Load saved cloudFiles (carousel images/PDF)
+        if (existingPost.cloudFiles && existingPost.cloudFiles.length > 0) {
+          setSavedCloudFiles(existingPost.cloudFiles);
+        }
+
         if (existingPost.cta) {
           setCta(existingPost.cta);
         }
@@ -177,6 +191,7 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
   const saveGeneratedPostsMutation =
     trpc.viewer.postFactory.saveGeneratedPosts.useMutation({
       onSuccess: (data) => {
+        setCurrentPostId(data.postId);
         showToast("Content saved successfully!", "success");
       },
       onError: (error) => {
@@ -474,6 +489,21 @@ const PostFactoryPage: React.FC & { PageWrapper?: any } = () => {
             regenerateLoading={regenerateMutation.isLoading}
             handleCopy={handleCopy}
             handleRegenerate={handleRegenerate}
+            currentPostId={currentPostId}
+            savedCloudFiles={savedCloudFiles}
+            onSaveCloudFiles={(cloudFileIds: number[]) => {
+              // Save cloud files to the post
+              saveGeneratedPostsMutation.mutate({
+                outline,
+                tone,
+                outputs,
+                cta,
+                utm,
+                ideaId: typeof ideaId === "string" ? ideaId : undefined,
+                cloudFileIds,
+                postId: currentPostId,
+              });
+            }}
           />
         </div>
       </Shell>
