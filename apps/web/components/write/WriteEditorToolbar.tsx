@@ -17,6 +17,7 @@ type Props = {
   onCopyToWritePage: (c: string) => void;
   currentUser?: { appId?: string; avatarUrl?: string } | null;
   hasAI: boolean;
+  onOpenAccounts?: () => void;
 };
 
 export default function WriteEditorToolbar({
@@ -31,6 +32,7 @@ export default function WriteEditorToolbar({
   onCopyToWritePage,
   currentUser,
   hasAI,
+  onOpenAccounts,
 }: Props) {
   return (
     <div className="flex h-[43px] items-center gap-2 border-b border-r bg-white px-2 shadow-sm ">
@@ -66,7 +68,7 @@ export default function WriteEditorToolbar({
         <Paperclip className="h-5 w-5" />
       </button>
       {currentUser && (
-        <div onClick={() => {}} className="ml-auto flex cursor-pointer items-center justify-center hover:font-bold">
+        <div onClick={() => onOpenAccounts && onOpenAccounts()} className="ml-auto flex cursor-pointer items-center justify-center hover:font-bold">
           <SocialAvatar size="sm" appId={currentUser?.appId!} avatarUrl={currentUser?.avatarUrl!} />
         </div>
       )}

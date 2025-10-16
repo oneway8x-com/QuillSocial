@@ -146,6 +146,7 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
                 onCopyToWritePage={(c: string) => setEditorContent(c)}
                 currentUser={currentUser}
                 hasAI={!ischeckForAIAppsLoading && isAIPresent}
+                onOpenAccounts={() => setShowModalAccounts(true)}
               />
 
               {appId === "medium-social" ? (
