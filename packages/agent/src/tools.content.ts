@@ -176,7 +176,7 @@ Return a JSON object with each platform as a key and the post content as the val
       userId: ctx.meta?.userId ?? -1,
       teamId: ctx.meta?.teamId,
       requestType: ctx.meta?.requestType ?? "generate_posts",
-      model: ctx.meta?.model ?? "gpt-4o-mini",
+      model: ctx.meta?.model ?? "gpt-4o",
     });
 
     const response = await callOpenAI([
