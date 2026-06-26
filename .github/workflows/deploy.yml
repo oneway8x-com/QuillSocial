@@ -42,6 +42,7 @@ jobs:
           NEXTAUTH_SECRET: "build-time-dummy-secret"
           MY_APP_ENCRYPTION_KEY: "build-time-dummy-encryption-key-32chars!"
           NEXTAUTH_URL: "http://localhost:3000/api/auth"
+          NEXT_PUBLIC_WEBAPP_URL: "http://localhost:3000"
 
       - name: Authenticate with Google Cloud
         id: auth
