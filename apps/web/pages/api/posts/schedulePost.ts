@@ -1,4 +1,4 @@
-import { getUserStats } from "./functCheck";
+import { getUserStats } from "@server/lib/posts/functCheck";
 import { getServerSession } from "@quillsocial/features/auth/lib/getServerSession";
 import { defaultResponder } from "@quillsocial/lib/server";
 import { PostStatus } from "@quillsocial/lib/constants/enums";

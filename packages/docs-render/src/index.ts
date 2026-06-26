@@ -1,4 +1,4 @@
-import { CarouselInput } from "./types";
+import type { CarouselInput } from "./types";
 import { renderImages as ri, renderPdf as rp } from "./renderer/render";
 import fs from "fs";
 import path from "path";
@@ -16,6 +16,7 @@ export async function renderPdfFromJson(input: CarouselInput): Promise<string> {
 
 export { toHTML } from "./renderer/htmlTemplate";
 export { normalizeInput } from "./cli";
+export { DEFAULT_BRAND } from "./types";
 
 function validateInput(input: CarouselInput) {
   if (!input.slides || input.slides.length < 1) throw new Error("Input must contain at least one slide");

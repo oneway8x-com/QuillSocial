@@ -1,7 +1,7 @@
 import React from "react";
 import classNames from "@quillsocial/lib/classNames";
 
-type StepKey = 1 | 2;
+type StepKey = 1 | 2 | 3;
 
 interface OnboardingProgressHeaderProps {
   currentStep: StepKey;
@@ -10,6 +10,7 @@ interface OnboardingProgressHeaderProps {
 const steps = [
   { number: 1, label: "Purpose & Plan" },
   { number: 2, label: "First Post" },
+  { number: 3, label: "First Replies" },
 ] as const;
 
 export const OnboardingProgressHeader: React.FC<OnboardingProgressHeaderProps> = ({ currentStep }) => {

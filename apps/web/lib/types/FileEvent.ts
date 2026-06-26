@@ -1,5 +1,5 @@
-import { FormEvent } from "react";
+import { ChangeEvent } from "react";
 
-export interface FileEvent<T = Element> extends FormEvent<T> {
+export interface FileEvent<T = Element> extends ChangeEvent<T> {
   target: EventTarget & T;
 }

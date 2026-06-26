@@ -35,6 +35,6 @@
     "@quillsocial/tsconfig": "*",
     "@quillsocial/types": "*",
     "@types/node-schedule": "^2.1.0",
-    "typescript": "^4.9.4"
+    "typescript": "^5.9.3"
   }
 }

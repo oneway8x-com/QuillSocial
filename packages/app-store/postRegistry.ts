@@ -17,7 +17,7 @@ import { post as xPost } from "@quillsocial/app-store/xconsumerkeyssocial/lib";
 /**
  * Type definition for a post handler function
  */
-export type PostHandler = (postId: number) => Promise<any>;
+export type PostHandler = (...args: any[]) => Promise<any>;
 
 /**
  * Registry mapping app IDs to their post handler functions

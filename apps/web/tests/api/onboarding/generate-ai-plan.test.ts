@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { NextApiRequest, NextApiResponse } from "next";
-import handler from "../generate-ai-plan";
+import handler from "../../../pages/api/onboarding/generate-ai-plan";
 
 // Mock dependencies
 vi.mock("@quillsocial/features/auth/lib/getServerSession");

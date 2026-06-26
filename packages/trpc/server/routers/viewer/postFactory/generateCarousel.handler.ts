@@ -1,8 +1,7 @@
 import type { GenerateCarouselInput } from "./generateCarousel.schema";
 import type { TrpcSessionUser } from "@quillsocial/trpc/server/trpc";
 import type { PrismaClient } from "@quillsocial/prisma/client";
-import { renderImagesFromJson, renderPdfFromJson } from "@quillsocial/docs-render";
-import { DEFAULT_BRAND } from "@quillsocial/docs-render/dist/src/types";
+import { DEFAULT_BRAND, renderImagesFromJson, renderPdfFromJson } from "@quillsocial/docs-render";
 import { readFileSync, unlinkSync } from "fs";
 import { uploadGCP } from "@quillsocial/app-store/googlecloudstorage/lib/uploadGCP";
 import logger from "@quillsocial/lib/logger";

@@ -12,7 +12,6 @@ import {
   SkeletonText,
   Table,
   TextField,
-  Select,
   showToast,
 } from "@quillsocial/ui";
 import { Search, User, Shield } from "@quillsocial/ui/components/icon";
@@ -104,15 +103,15 @@ function AdminUsersPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Select
+          <select
             value={filters.role}
             onChange={(e) => handleRoleFilter(e.target.value as "USER" | "ADMIN" | "ALL")}
-            className="w-32"
+            className="border-default bg-default text-default w-32 rounded-md border px-3 py-2 text-sm"
           >
             <option value="ALL">All Roles</option>
             <option value="USER">Users</option>
             <option value="ADMIN">Admins</option>
-          </Select>
+          </select>
         </div>
       </div>
 

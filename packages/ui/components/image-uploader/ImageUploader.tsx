@@ -9,7 +9,7 @@ import { showToast } from "../toast";
 import { useLocale } from "@quillsocial/lib/hooks/useLocale";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import NextImage from "next/image";
-import type { FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import Cropper from "react-easy-crop";
 
@@ -78,7 +78,7 @@ type ImageUploaderProps = {
   disableCropTool?: boolean;
 };
 
-interface FileEvent<T = Element> extends FormEvent<T> {
+interface FileEvent<T = Element> extends ChangeEvent<T> {
   target: EventTarget & T;
 }
 
@@ -242,7 +242,7 @@ export default function ImageUploader({
             )}
             <label className="bg-subtle hover:bg-muted hover:text-emphasis border-subtle text-default mt-8 rounded-sm border px-3 py-1 text-xs font-medium leading-4 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-1">
               <input
-                onInput={onInputFile}
+                onChange={onInputFile}
                 type="file"
                 name={id}
                 placeholder={t("upload_image")}
