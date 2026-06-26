@@ -5,7 +5,6 @@
 import { ErrorPage } from "@components/error/error-page";
 import { getErrorFromUnknown } from "@quillsocial/lib/errors";
 import { HttpError } from "@quillsocial/lib/http-error";
-import logger from "@quillsocial/lib/logger";
 import type { NextPage, NextPageContext } from "next";
 import type { ErrorProps } from "next/error";
 import NextError from "next/error";
@@ -22,8 +21,6 @@ type CustomErrorProps = {
 type AugmentedNextPageContext = Omit<NextPageContext, "err"> & {
   err: AugmentedError;
 };
-
-const log = logger.getChildLogger({ prefix: ["[error]"] });
 
 const CustomError: NextPage<CustomErrorProps> = (props) => {
   const { statusCode, err, message, hasGetInitialPropsRun } = props;
@@ -72,10 +69,10 @@ CustomError.getInitialProps = async (ctx: AugmentedNextPageContext) => {
     // Overrides http status code if present in errorInitialProps
     res.statusCode = errorInitialProps.statusCode;
 
-    log.debug(
-      `server side logged this: ${err?.toString() ?? JSON.stringify(err)}`
+    console.debug(
+      `[error] server side logged this: ${err?.toString() ?? JSON.stringify(err)}`
     );
-    log.info("return props, ", errorInitialProps);
+    console.info("[error] return props", errorInitialProps);
 
     return errorInitialProps;
   } else {
@@ -89,7 +86,7 @@ CustomError.getInitialProps = async (ctx: AugmentedNextPageContext) => {
     //    Boundary. Read more about what types of exceptions are caught by Error
     //    Boundaries: https://reactjs.org/docs/error-boundaries.html
     if (err) {
-      log.info("client side logged this", err);
+      console.info("[error] client side logged this", err);
       return errorInitialProps;
     }
   }

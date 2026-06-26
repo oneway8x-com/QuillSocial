@@ -2,7 +2,7 @@ import { TrpcSessionUser } from "../../../trpc";
 import { getReminderType, getDayTrial } from "../payments/remdinder-type";
 import { getFirstOrCreateOrgOfUserHandler } from "./getFirstOrCreateOrgOfUser.handler";
 import { prisma } from "@quillsocial/prisma";
-import { BillingType } from "@quillsocial/prisma/enums";
+import { BillingType, UserPermissionRole } from "@quillsocial/prisma/enums";
 
 type GetPricingTeamOptions = {
   ctx: {
@@ -17,6 +17,20 @@ export const getPricingTeamHanlder = async ({ ctx }: GetPricingTeamOptions) => {
   const userId = ctx.user.id;
 
   const timeZone = ctx.user.timeZone;
+
+  // Check if user is ADMIN - skip reminders for admins
+  if (ctx.user.role === UserPermissionRole.ADMIN) {
+    return {
+      day: 0,
+      isOwner: true,
+      isRemind: false,
+      dayTrial: 0,
+      billings: 0,
+      isLTD: false,
+      maxLTDSubs: 1,
+    };
+  }
+
   const member = await prisma.membership.findFirst({
     where: {
       userId,

@@ -264,20 +264,17 @@ const PlainForm = <T extends FieldValues>(
         {
           /* @see https://react-hook-form.com/advanced-usage/#SmartFormComponent */
           React.Children.map(props.children, (child) => {
-            return typeof child !== "string" &&
-              typeof child !== "number" &&
-              typeof child !== "boolean" &&
-              child &&
-              "props" in child &&
-              child.props.name
-              ? React.createElement(child.type, {
+            if (!React.isValidElement<{ name?: string }>(child) || !child.props.name) {
+              return child;
+            }
+
+            return React.createElement(child.type, {
                   ...{
                     ...child.props,
                     register: form.register,
                     key: child.props.name,
                   },
                 })
-              : child;
           })
         }
       </form>

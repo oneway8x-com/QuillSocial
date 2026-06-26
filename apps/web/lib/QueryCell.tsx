@@ -1,5 +1,5 @@
 import type { TRPCClientErrorLike } from "@quillsocial/trpc/client";
-import type { DecorateProcedure } from "@quillsocial/trpc/react/shared";
+import type { DecorateProcedure } from "@trpc/react-query/dist/createTRPCReact";
 import type {
   AnyQueryProcedure,
   inferProcedureInput,

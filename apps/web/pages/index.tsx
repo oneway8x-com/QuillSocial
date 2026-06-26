@@ -15,8 +15,8 @@ function HomePage() {
     }
 
     if (session) {
-      // User is authenticated, redirect to write page
-      router.replace("/write/0");
+      // User is authenticated, redirect to the workflow dashboard
+      router.replace("/dashboard");
     } else {
       // User is not authenticated, redirect to login
       router.replace("/auth/login");

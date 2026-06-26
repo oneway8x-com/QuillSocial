@@ -2,6 +2,7 @@ const envFile = process.env.NODE_ENV === 'production' ? '../../.env.production' 
 require("dotenv").config({ path: envFile });
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const os = require("os");
+const path = require("path");
 const englishTranslation = require("./public/static/locales/en/common.json");
 const { withAxiom } = require("next-axiom");
 const { i18n } = require("./next-i18next.config");
@@ -133,13 +134,12 @@ const nextConfig = {
   i18n,
   productionBrowserSourceMaps: true,
   output: 'standalone',
+  turbopack: {
+    root: path.join(__dirname, "../.."),
+  },
   /* We already do type check on GH actions */
   typescript: {
     ignoreBuildErrors: !!process.env.CI,
-  },
-  /* We already do linting on GH actions */
-  eslint: {
-    ignoreDuringBuilds: !!process.env.CI,
   },
   transpilePackages: [
     "@quillsocial/app-store",

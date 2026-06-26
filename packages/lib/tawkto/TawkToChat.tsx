@@ -53,14 +53,6 @@ export const TawkToChat: React.FC<TawkToChatProps> = ({
   } = useTawkTo({
     ...options,
     onChatMessageVisitor: (message, extractedVisitorInfo) => {
-      // Log extracted visitor info
-      if (options.debug) {
-        console.log('[TawkTo] Visitor message with info:', {
-          message,
-          visitorInfo: extractedVisitorInfo
-        });
-      }
-
       // Call user-provided callback
       if (onVisitorInfoExtracted && extractedVisitorInfo) {
         onVisitorInfoExtracted(extractedVisitorInfo);
@@ -70,11 +62,6 @@ export const TawkToChat: React.FC<TawkToChatProps> = ({
       options.onChatMessageVisitor?.(message, extractedVisitorInfo);
     },
     onPrechatSubmit: (data) => {
-      // Log pre-chat form data
-      if (options.debug) {
-        console.log('[TawkTo] Pre-chat form submitted:', data);
-      }
-
       // Extract and callback with visitor info
       if (onVisitorInfoExtracted) {
         onVisitorInfoExtracted({
@@ -92,14 +79,6 @@ export const TawkToChat: React.FC<TawkToChatProps> = ({
 
   // Auto-identify user when available
   useEffect(() => {
-    console.log('🔵 [TawkToChat] Auto-identify effect triggered:', {
-      isLoaded,
-      hasUser: !!user,
-      autoIdentify,
-      userEmail: user?.email,
-      userName: user?.name
-    });
-
     if (isLoaded && user && autoIdentify) {
       // Build visitor data, filtering out undefined values
       const rawVisitorData: TawkToVisitor = {
@@ -116,31 +95,15 @@ export const TawkToChat: React.FC<TawkToChatProps> = ({
         Object.entries(rawVisitorData).filter(([_, value]) => value !== undefined)
       );
 
-      console.log('📤 [TawkToChat] Sending visitor data to Tawk.to:', {
-        name: visitorData.name,
-        email: visitorData.email,
-        phone: visitorData.phone,
-        fullData: visitorData,
-        removedUndefinedFields: Object.keys(rawVisitorData).filter(key => rawVisitorData[key as keyof TawkToVisitor] === undefined)
-      });
-
       setVisitorAttributes(visitorData, (error) => {
         if (error) {
-          console.error('❌ [TawkToChat] Failed to set visitor attributes:', error);
+          // swallow error or optionally surface to a provided error handler in future
         } else {
-          console.log('✅ [TawkToChat] Visitor attributes set successfully');
-          if (options.debug) {
-            console.log('✅ [TawkToChat] Debug: Visitor attributes set successfully');
-          }
+          // success - nothing to log
         }
       });
     } else {
-      console.log('⚠️ [TawkToChat] Skipping auto-identify:', {
-        reason: !isLoaded ? 'not loaded' : !user ? 'no user' : !autoIdentify ? 'autoIdentify disabled' : 'unknown',
-        isLoaded,
-        hasUser: !!user,
-        autoIdentify
-      });
+      // skipping auto-identify
     }
   }, [isLoaded, user, autoIdentify, setVisitorAttributes, options.debug]);
 

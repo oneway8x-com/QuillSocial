@@ -3,6 +3,14 @@
   "globalDependencies": [
     "yarn.lock"
   ],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "EMAIL_FROM",
+    "MY_APP_ENCRYPTION_KEY",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL",
+    "NEXT_PUBLIC_WEBAPP_URL"
+  ],
   "tasks": {
     "@quillsocial/prisma#build": {
       "cache": false

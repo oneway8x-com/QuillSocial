@@ -19,7 +19,7 @@ export function Tooltip({
   defaultOpen?: boolean;
   side?: "top" | "right" | "bottom" | "left";
   onOpenChange?: (open: boolean) => void;
-} & TooltipPrimitive.TooltipContentProps) {
+} & Omit<TooltipPrimitive.TooltipContentProps, "content">) {
   return (
     <TooltipPrimitive.Root
       delayDuration={delayDuration || 50}

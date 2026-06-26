@@ -60,7 +60,7 @@ export const ScheduleDialog: React.FC<ScheduleDialogProps> = ({
 
   // Check if plugin comments are supported for this app
   const isPluginCommentSupported = appId === TWITTER_APP_ID;
-  console.log(appId, TWITTER_APP_ID);
+
   const handleDialogClose = () => {
     if (onClose) {
       onClose();

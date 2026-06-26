@@ -1,0 +1,12 @@
+{
+  "title": "How to Enter a Crowded Market",
+  "brand": { "bg": "#F8F7FF", "fg": "#1A1A2E", "accent": "#7C3AED", "logoText": "Quill Social", "padding": 72 },
+  "slides": [
+    { "heading": "How to Enter a Crowded Market with Confidence", "subheading": "Key strategies for success!" },
+    { "heading": "Understanding Your Niche", "bullets": ["Identify your ideal customer","Create a detailed persona","Focus your messaging"] },
+    { "heading": "Building in Public", "bullets": ["Share your journey openly","Engage with your audience","Include clear CTAs to foster community"] },
+    { "heading": "Leveraging Social Proof", "bullets": ["Collect testimonials from satisfied customers","Document growth with engaging visuals","Collaborate with influencers for added credibility"] },
+    { "heading": "Iterate and Improve", "bullets": ["Gather regular feedback from your audience","Stay agile and ready to pivot","Celebrate all wins to motivate your community"] },
+    { "heading": "Embrace the Journey", "bullets": ["Reflect on your progress and lessons learned","Encourage others to share their experiences","Build a supportive learning community"] }
+  ]
+}

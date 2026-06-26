@@ -1,7 +1,7 @@
 ###########################
 # Production image using local build
 ###########################
-FROM node:18.20.8-alpine AS runner
+FROM node:20.19.0-alpine AS runner
 WORKDIR /quillsocial
 
 # Install only runtime dependencies

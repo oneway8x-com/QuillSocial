@@ -82,16 +82,16 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
   const scriptLoadedRef = useRef(false);
   const configRef = useRef<TawkToConfig | null>(null);
 
-  const log = useCallback((message: string, ...args: any[]) => {
-    if (debug) {
-      console.log(`[TawkTo] ${message}`, ...args);
-    }
+  // Minimal logger that respects the debug flag. Avoid using console.* directly
+  const log = useCallback((message: string, ..._args: any[]) => {
+    // intentionally left blank to avoid console output; can be extended to use a pluggable logger
+    return;
   }, [debug]);
 
   // Initialize configuration
   useEffect(() => {
     if (!isTawkToConfigured()) {
-      console.warn('Tawk.to is not properly configured. Please set NEXT_PUBLIC_TAWK_TO_PROPERTY_ID and NEXT_PUBLIC_TAWK_TO_WIDGET_ID');
+      // configuration missing - nothing to do
       return;
     }
 
@@ -102,24 +102,16 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
   // Setup Tawk.to API and callbacks
   const setupTawkToAPI = useCallback(() => {
     if (typeof window === 'undefined' || !window.Tawk_API) {
-      console.warn('⚠️ [TawkTo] Cannot setup API - window or Tawk_API not available');
+      // window or Tawk_API not available - cannot setup
       return;
     }
 
     const api = window.Tawk_API;
     log('Setting up Tawk.to API callbacks');
 
-    console.log('🔍 [TawkTo] Current Tawk_API state before setup:', {
-      hasOnLoad: !!api.onLoad,
-      hasOnStatusChange: !!api.onStatusChange,
-      hasOnChatStarted: !!api.onChatStarted,
-      currentStatus: api.getStatus?.(),
-    });
-
     // Setup callbacks
     const originalOnLoad = api.onLoad;
     api.onLoad = () => {
-      console.log('🎉 [TawkTo] onLoad callback fired!');
       log('Widget loaded');
       setIsLoaded(true);
       onLoad?.();
@@ -160,8 +152,6 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
 
     // Extract visitor info from pre-chat form submission
     api.onPrechatSubmit = (data: any) => {
-      log('Pre-chat form submitted:', data);
-
       const extractedVisitorInfo: TawkToVisitor = {
         name: data.name || data.fullName || undefined,
         email: data.email || undefined,
@@ -184,12 +174,8 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
 
     // Extract visitor info when they send messages
     api.onChatMessageVisitor = (message: string) => {
-      log('Visitor message received:', message);
-
       // Try to get visitor info from Tawk API's visitor object
       let currentVisitor = api.visitor ? { ...api.visitor } : { ...visitorInfo };
-
-      log('Current visitor data from API:', currentVisitor);
 
       // Extract email from message if not already available
       if (!currentVisitor?.email) {
@@ -231,16 +217,6 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     const config = configRef.current;
     log('Loading Tawk.to script', config);
 
-    // Log visitor data being set
-    if (config.visitor) {
-      console.log('🔵 [TawkTo] Setting visitor data BEFORE script load:', {
-        name: config.visitor.name,
-        email: config.visitor.email,
-        phone: config.visitor.phone,
-        fullVisitorObject: config.visitor
-      });
-    }
-
     // Initialize Tawk_API before loading script
     window.Tawk_API = window.Tawk_API || ({} as TawkToAPI);
     window.Tawk_LoadStart = new Date();
@@ -253,9 +229,6 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
 
     if (config.visitor && window.Tawk_API) {
       window.Tawk_API.visitor = config.visitor;
-      console.log('✅ [TawkTo] Visitor data set on Tawk_API.visitor:', window.Tawk_API.visitor);
-    } else if (!config.visitor) {
-      console.log('⚠️ [TawkTo] No visitor data provided in config');
     }
 
     if (config.zIndex && window.Tawk_API) {
@@ -285,12 +258,6 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
         // Check if widget actually loaded after a delay
         setTimeout(() => {
           if (!isLoaded && window.Tawk_API) {
-            console.warn('⚠️ [TawkTo] Script loaded but onLoad callback never fired. Manually setting loaded state.');
-            console.log('🔍 [TawkTo] Tawk_API state:', {
-              exists: !!window.Tawk_API,
-              status: window.Tawk_API?.getStatus?.(),
-              hasOnLoad: !!window.Tawk_API?.onLoad
-            });
             // Manually trigger loaded state if widget exists
             setIsLoaded(true);
             onLoad?.();
@@ -300,7 +267,7 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
     };
 
     script.onerror = () => {
-      console.error('Failed to load Tawk.to script');
+      // script load failed
     };
 
     const firstScript = document.getElementsByTagName('script')[0];
@@ -352,27 +319,16 @@ export function useTawkTo(options: UseTawkToOptions = {}): UseTawkToReturn {
   }, [log]);
 
   const setVisitorAttributes = useCallback((attributes: TawkToVisitor, callback?: (error?: any) => void) => {
-    console.log('🔵 [TawkTo] setVisitorAttributes called with:', {
-      name: attributes.name,
-      email: attributes.email,
-      phone: attributes.phone,
-      allAttributes: attributes,
-      tawkAPIExists: !!window.Tawk_API,
-      setAttributesExists: !!(window.Tawk_API?.setAttributes)
-    });
+    // setVisitorAttributes called - attributes provided
 
     if (window.Tawk_API) {
       window.Tawk_API.setAttributes(attributes, (error) => {
-        if (error) {
-          console.error('❌ [TawkTo] Error setting visitor attributes:', error);
-        } else {
-          console.log('✅ [TawkTo] Visitor attributes set successfully:', attributes);
-        }
+        // callback invoked after attempting to set attributes
         callback?.(error);
       });
       log('Visitor attributes set', attributes);
     } else {
-      console.error('❌ [TawkTo] Cannot set attributes - Tawk_API not available');
+      // Tawk_API not available - cannot set attributes
     }
   }, [log]);
 

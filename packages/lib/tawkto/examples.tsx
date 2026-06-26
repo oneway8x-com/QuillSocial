@@ -23,12 +23,10 @@ export function ChatSupportButton() {
   } = useTawkTo({
     debug: process.env.NODE_ENV === 'development',
     onChatStarted: () => {
-      console.log('User started a chat session');
+      // user started a chat session
     },
     onChatMessageVisitor: (message, extractedInfo) => {
-      console.log('Visitor sent message:', message);
       if (extractedInfo) {
-        console.log('Extracted visitor info:', extractedInfo);
         setExtractedVisitor(extractedInfo);
 
         // Store visitor info in your database
@@ -36,7 +34,6 @@ export function ChatSupportButton() {
       }
     },
     onPrechatSubmit: (data) => {
-      console.log('Pre-chat form submitted:', data);
       // Store pre-chat form data
       saveVisitorInfoToDatabase({
         name: data.name || data.fullName,
@@ -69,7 +66,7 @@ export function ChatSupportButton() {
   // Display extracted visitor info
   useEffect(() => {
     if (visitorInfo) {
-      console.log('Current visitor info from hook:', visitorInfo);
+      // visitor info updated
     }
   }, [visitorInfo]);
 
@@ -108,7 +105,7 @@ async function saveVisitorInfoToDatabase(visitorInfo: TawkToVisitor) {
       body: JSON.stringify(visitorInfo)
     });
   } catch (error) {
-    console.error('Failed to save visitor info:', error);
+    // ignore save errors for now
   }
 }
 
@@ -140,7 +137,6 @@ export function ChatWidget() {
       autoStart={session.user.plan !== 'free'}
       // Callback when visitor info is extracted
       onVisitorInfoExtracted={(visitorInfo) => {
-        console.log('Visitor info extracted in component:', visitorInfo);
         saveVisitorInfoToDatabase(visitorInfo);
       }}
     />

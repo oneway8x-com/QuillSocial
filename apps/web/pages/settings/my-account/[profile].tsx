@@ -1,7 +1,10 @@
 import PageWrapper from "@components/PageWrapper";
+import AppCard from "@components/apps/AppCard";
 import InstallApp from "@components/apps/InstallApp";
+import apps from "@components/apps/appsData";
 import TwoFactor from "@components/auth/TwoFactor";
 import { SelectSkeletonLoader } from "@components/common/SkeletonLoader";
+import ProfileForm from "@components/profile/ProfileForm";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ErrorCode } from "@quillsocial/features/auth/lib/ErrorCode";
 import OpenAIUsageCard from "@quillsocial/features/settings/components/OpenAIUsageCard";
@@ -49,9 +52,6 @@ import type { BaseSyntheticEvent } from "react";
 import { useRef, useState } from "react";
 import { Controller, useForm, useFormContext } from "react-hook-form";
 import { z } from "zod";
-import AppCard from "@components/apps/AppCard";
-import apps from "@components/apps/appsData";
-import ProfileForm from "@components/profile/ProfileForm";
 
 const SkeletonLoader = ({
   title,
@@ -126,8 +126,16 @@ const ProfileView = () => {
     //   href: "/settings/my-account/settings",
     // },
     {
-      name: "Apps",
+      name: "App Integrations",
       href: "/settings/my-account/app-integrations",
+    },
+    {
+      name: "Billing",
+      href: "/billing/overview",
+    },
+    {
+      name: "AI Usage",
+      href: "/billing/usage",
     },
   ];
 
@@ -269,9 +277,9 @@ const ProfileView = () => {
     <>
       <Shell
         withoutSeo
-        heading="Profile"
+        heading="Settings"
         hideHeadingOnMobile
-        subtitle="Manage settings for your QuillAI profile."
+        subtitle="Manage your profile, app connections, billing, and AI usage."
       >
         <Meta
           title={t("profile")}
@@ -324,6 +332,26 @@ const ProfileView = () => {
           </>
         ) : slug === "app-integrations" ? (
           <>
+            <div className="mt-5 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-950">
+                    API Keys & BYOK
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    Connect your own X API key or AI provider key for higher
+                    usage limits and cost control.
+                  </p>
+                </div>
+                <Button
+                  href="/settings/my-account/app-integrations"
+                  color="secondary"
+                  className="w-fit"
+                >
+                  Configure keys
+                </Button>
+              </div>
+            </div>
             <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
               {apps.map((app) => (
                 <AppCard

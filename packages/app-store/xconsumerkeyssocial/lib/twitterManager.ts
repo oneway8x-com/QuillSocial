@@ -344,7 +344,8 @@ export async function searchXCommunityIdByName(
 }
 
 export const post = async (
-  postId: number
+  postId: number,
+  credentialId: number
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const twitterPost = await prisma.post.findUnique({
@@ -357,24 +358,32 @@ export const post = async (
     const log = logger.getChildLogger({
       prefix: ["[xconsumerkeys/twitterManager/post]"],
     });
-    if (!twitterPost || !twitterPost.credentialId) {
-      log.error("Post not found or no credential ID", { postId });
-      return { success: false, error: "Post not found or no credential ID" };
+    if (!twitterPost) {
+      log.error("Post not found", { postId });
+      return { success: false, error: "Post not found" };
     }
 
+    // Use the provided credentialId instead of the one from the post
+    const effectiveCredentialId = credentialId;
+
     // Check if this is an xconsumerkeys-social credential
-    if (twitterPost.credential?.appId !== "xconsumerkeys-social") {
-      log.error("This post is not associated with xconsumerkeys-social", {
-        credentialAppId: twitterPost.credential?.appId,
+    const credential = await prisma.credential.findUnique({
+      where: { id: effectiveCredentialId },
+    });
+
+    if (!credential || credential.appId !== "xconsumerkeys-social") {
+      log.error("Invalid credential or not associated with xconsumerkeys-social", {
+        credentialId: effectiveCredentialId,
+        credentialAppId: credential?.appId,
       });
       return {
         success: false,
-        error: "This post is not associated with xconsumerkeys-social",
+        error: "Invalid credential or not associated with xconsumerkeys-social",
       };
     }
 
     const { client, credentials } = await getXConsumerKeysClient(
-      twitterPost.credentialId
+      effectiveCredentialId
     );
     if (!client || !credentials) {
       await prisma.post.update({
@@ -404,6 +413,15 @@ export const post = async (
         error:
           "Access tokens are required for posting. Please provide both access token and access token secret in your X Consumer Keys integration settings.",
       };
+    }
+
+    // Check if this post has thread content - if so, delegate to postThread
+    const outputs = (twitterPost.multiPlatformOutputs || twitterPost.result || null) as any;
+    if (outputs?.x && Array.isArray(outputs.x) && outputs.x.length > 1) {
+      log.info("Detected thread content with multiple items, delegating to postThread", {
+        threadLength: outputs.x.length
+      });
+      return postThread(postId, credentialId);
     }
 
     // Post directly using the consumer keys + user access tokens
@@ -586,6 +604,183 @@ export const post = async (
         error instanceof Error ? error.message : "Unknown error"
       }`,
     };
+  }
+};
+
+/**
+ * Post a thread (multiple tweets) for the given postId.
+ * The function will look for outputs.x as an array (preferred) or parse content into lines.
+ * It posts the first tweet, then posts subsequent tweets as replies to the previous tweet to form a thread.
+ */
+export const postThread = async (
+  postId: number,
+  credentialId: number
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const twitterPost = await prisma.post.findUnique({
+      where: { id: postId },
+      include: { credential: true },
+    });
+
+    const log = logger.getChildLogger({ prefix: ["[xconsumerkeys/twitterManager/postThread]"] });
+
+    if (!twitterPost) {
+      log.error("Post not found", { postId });
+      return { success: false, error: "Post not found" };
+    }
+
+    // Use the provided credentialId
+    const effectiveCredentialId = credentialId;
+
+    // Check if this is an xconsumerkeys-social credential
+    const credential = await prisma.credential.findUnique({
+      where: { id: effectiveCredentialId },
+    });
+
+    if (!credential || credential.appId !== "xconsumerkeys-social") {
+      log.error("Invalid credential or not associated with xconsumerkeys-social", {
+        credentialId: effectiveCredentialId,
+        credentialAppId: credential?.appId,
+      });
+      return { success: false, error: "Invalid credential or not associated with xconsumerkeys-social" };
+    }
+
+    const { client, credentials } = await getXConsumerKeysClient(effectiveCredentialId);
+    if (!client || !credentials) {
+      await prisma.post.update({ where: { id: twitterPost.id }, data: { status: "ERROR" } });
+      log.error("Could not create Twitter client with consumer keys");
+      return { success: false, error: "Could not create Twitter client with consumer keys" };
+    }
+
+    if (!credentials.accessToken || !credentials.accessSecret) {
+      await prisma.post.update({ where: { id: twitterPost.id }, data: { status: "ERROR" } });
+      log.error("Missing access tokens for posting thread");
+      return { success: false, error: "Access tokens are required for posting threads" };
+    }
+
+    // Determine thread items: prefer multiPlatformOutputs.x or content
+    let threadItems: string[] = [];
+    try {
+      const outputs = (twitterPost.multiPlatformOutputs || twitterPost.result || null) as any;
+      if (outputs && outputs.x && Array.isArray(outputs.x) && outputs.x.length > 0) {
+        threadItems = outputs.x as string[];
+      }
+    } catch (e) {
+      // ignore parsing errors
+    }
+
+    // Fallbacks
+    if (threadItems.length === 0) {
+      // If multiPlatformOutputs not present or not array, try content where parseXThread style may be used.
+      if (twitterPost.content && typeof twitterPost.content === "string") {
+        // split by double newlines or newline depending on format
+        const byDouble = twitterPost.content.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+        if (byDouble.length > 1) threadItems = byDouble;
+        else threadItems = twitterPost.content.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+      }
+    }
+
+    if (threadItems.length === 0) {
+      log.error("No thread items found to post", { postId });
+      return { success: false, error: "No thread items found to post" };
+    }
+
+    log.info("Posting thread", { postId, items: threadItems.length });
+
+    let lastTweetId: string | undefined = undefined;
+    for (let i = 0; i < threadItems.length; i++) {
+      const text = threadItems[i];
+      try {
+        let posted;
+        if (lastTweetId) {
+          // Reply to the previous tweet using the same pattern as replyToTweet
+          posted = await retryWithBackoff(
+            () => client.tweet(text, {
+              reply: {
+                in_reply_to_tweet_id: lastTweetId!
+              }
+            }),
+            { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
+          );
+        } else {
+          // First tweet in thread
+          posted = await retryWithBackoff(
+            () => client.tweet(text),
+            { retries: 3, baseDelayMs: 1000, maxWaitMs: 30000 }
+          );
+        }
+
+        // Extract tweet ID from response
+        const newId = posted?.data?.id || posted?.id_str || posted?.id;
+        if (!newId) {
+          log.error("Failed to get tweet id after posting thread item", { index: i, response: posted });
+          throw new Error("No tweet id returned");
+        }
+
+        lastTweetId = String(newId);
+        log.info("Posted thread item", { index: i, tweetId: lastTweetId });
+      } catch (err: any) {
+        log.error("Error posting thread item", { index: i, error: serializeError(err) });
+
+        // Check if it's a 403 error and classify it
+        if (err.code === 403 || err?.response?.status === 403) {
+          const errorClassification = classifyTwitter403Error(err);
+          log.error("403 Error Classification for thread item", {
+            index: i,
+            type: errorClassification.type,
+            message: errorClassification.message,
+            detail: errorClassification.detail,
+            solution: errorClassification.solution
+          });
+
+          // Update post status and persist error with classification
+          await prisma.post.update({
+            where: { id: twitterPost.id },
+            data: {
+              status: "ERROR",
+              result: {
+                error: true,
+                step: i,
+                code: 403,
+                type: errorClassification.type,
+                message: errorClassification.message,
+                solution: errorClassification.solution,
+                timestamp: new Date().toISOString()
+              } as any
+            }
+          });
+
+          return {
+            success: false,
+            error: `${errorClassification.message} (tweet ${i + 1}): ${errorClassification.solution}`
+          };
+        }
+
+        // Update post status and persist error for non-403 errors
+        await prisma.post.update({
+          where: { id: twitterPost.id },
+          data: {
+            status: "ERROR",
+            result: {
+              error: true,
+              step: i,
+              message: err?.message || String(err)
+            } as any
+          }
+        });
+        return { success: false, error: `Failed to post thread item ${i + 1}: ${err?.message || String(err)}` };
+      }
+    }
+
+    // All tweets posted successfully
+    await prisma.post.update({ where: { id: twitterPost.id }, data: { status: "POSTED", postedDate: new Date() } });
+    log.info("Thread posted successfully", { postId, lastTweetId });
+    return { success: true };
+  } catch (error: any) {
+    const log = logger.getChildLogger({ prefix: ["[xconsumerkeys/twitterManager/postThread]"] });
+    log.error("Unexpected error posting thread", { error: serializeError(error) });
+    await prisma.post.update({ where: { id: postId }, data: { status: "ERROR", result: { error: true, message: error?.message || String(error) } as any } }).catch(() => {});
+    return { success: false, error: `Unexpected error: ${error?.message || String(error)}` };
   }
 };
 

@@ -1,6 +1,6 @@
 import { redirectIfTrialOver } from "../payments/redirectIfTrialOver";
-import { ModalAccount } from "./SocialAccountsDialog";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { ModalAccount } from "./SocialAccountsDialog";
 import SocialAvatar from "./SocialAvatar";
 import { BillingNotifications } from "./components/BillingNotifications";
 import useAddAppMutation from "@quillsocial/app-store/_utils/useAddAppMutation";
@@ -49,25 +49,14 @@ import {
   ArrowLeft,
   ArrowRight,
   FileClock,
-  Wand,
   Lightbulb,
-  ExternalLink,
   LogOut,
-  CreditCard,
-  Copy,
   Settings,
   Users,
   User as UserIcon,
   CalendarDays,
   ListChecks,
-  BarChart,
-  Atom,
-  BarChart3,
   PenTool,
-  LinkedinIcon,
-  Newspaper,
-  Linkedin,
-  BookOpen,
   MessageCircle,
 } from "@quillsocial/ui/components/icon";
 import type { User as UserAuth } from "next-auth";
@@ -200,27 +189,29 @@ const Layout = (props: LayoutProps) => {
   }, [bannerRef]);
 
   // Handler for when visitor info is extracted from Tawk.to chat
-  const handleVisitorInfoExtracted = async (visitorInfo: TawkToVisitor | null) => {
-    console.log('📨 [Shell] handleVisitorInfoExtracted called:', {
+  const handleVisitorInfoExtracted = async (
+    visitorInfo: TawkToVisitor | null
+  ) => {
+    console.log("📨 [Shell] handleVisitorInfoExtracted called:", {
       hasVisitorInfo: !!visitorInfo,
-      visitorInfo
+      visitorInfo,
     });
 
     if (!visitorInfo) {
-      console.log('⚠️ [Shell] No visitor info to extract');
+      console.log("⚠️ [Shell] No visitor info to extract");
       return;
     }
 
     try {
       // Log visitor information with more details
-      console.log('✅ [Shell] Tawk.to visitor info extracted successfully:', {
+      console.log("✅ [Shell] Tawk.to visitor info extracted successfully:", {
         name: visitorInfo.name,
         nameType: typeof visitorInfo.name,
         email: visitorInfo.email,
         phone: visitorInfo.phone,
         allFields: Object.keys(visitorInfo),
         timestamp: new Date().toISOString(),
-        fullVisitorInfo: visitorInfo
+        fullVisitorInfo: visitorInfo,
       });
 
       // You can add additional logic here to save to your database
@@ -236,7 +227,7 @@ const Layout = (props: LayoutProps) => {
       //   })
       // });
     } catch (error) {
-      console.error('❌ [Shell] Failed to process visitor info:', error);
+      console.error("❌ [Shell] Failed to process visitor info:", error);
     }
   };
 
@@ -261,14 +252,10 @@ const Layout = (props: LayoutProps) => {
         pricingData?.isRemind
       ) {
         mobileNavigationBottomItems = mobileNavigationBottomItems.filter(
-          (x) =>
-            x.name.toLowerCase() === "billing" ||
-            x.name.toLowerCase() === "employees"
+          (x) => x.name.toLowerCase() === "more"
         );
         desktopNavigationItems = desktopNavigationItems.filter(
-          (x) =>
-            x.name.toLowerCase() === "billing" ||
-            x.name.toLowerCase() === "employees"
+          (x) => x.name.toLowerCase() === "settings"
         );
         const currentUrl = router.asPath;
         if (
@@ -294,24 +281,14 @@ const Layout = (props: LayoutProps) => {
 
       {/* Tawk.to Live Chat - Always extract visitor info from messages */}
       {(() => {
-        const tawkUser = user ? {
-          name: user.name || user.username || undefined,
-          email: user.email || undefined,
-          userId: user.id,
-          username: user.username || undefined,
-        } : undefined;
-
-        console.log('🔵 [Shell] Rendering TawkToChat with user data:', {
-          hasUser: !!user,
-          tawkUser,
-          autoIdentify: !!user,
-          userFromQuery: {
-            id: user?.id,
-            name: user?.name,
-            username: user?.username,
-            email: user?.email
-          }
-        });
+        const tawkUser = user
+          ? {
+              name: user.name || user.username || undefined,
+              email: user.email || undefined,
+              userId: user.id,
+              username: user.username || undefined,
+            }
+          : undefined;
 
         return (
           <TawkToChat
@@ -322,7 +299,7 @@ const Layout = (props: LayoutProps) => {
               userLogin: !!user,
             }}
             onVisitorInfoExtracted={handleVisitorInfoExtracted}
-            debug={process.env.NODE_ENV === 'development'}
+            debug={process.env.NODE_ENV === "development"}
           />
         );
       })()}
@@ -627,34 +604,37 @@ const MORE_SEPARATOR_NAME = "Admin";
 
 const navigation: NavigationItemType[] = [
   {
-    name: "Write",
-    href: "/write/0",
-    icon: PenTool,
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: ListChecks,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
-      return path.startsWith("/write");
+      return path.startsWith("/dashboard");
     },
   },
   {
-    name: "AI-Write",
-    href: "/ai-write",
+    name: "Ideas",
+    href: "/ideas-pillars",
     icon: Lightbulb,
-    isNeedAI: true,
-  },
-
-  {
-    name: "Templates",
-    href: "/post-generator",
-    icon: Wand,
-    isNeedAI: true,
-  },
-  {
-    name: "My Content",
-    href: "/my-content/all",
-    icon: FileClock,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
-      return path.startsWith("/my-content");
+      return path.startsWith("/ideas-pillars");
+    },
+  },
+  {
+    name: "Create",
+    href: "/create",
+    icon: PenTool,
+    isCurrent: ({ router }) => {
+      const path = router.asPath.split("?")[0];
+      return (
+        path.startsWith("/create") ||
+        path.startsWith("/write") ||
+        path.startsWith("/ai-write") ||
+        path.startsWith("/post-generator") ||
+        path.startsWith("/post-factory") ||
+        path.startsWith("/tools/linkedin")
+      );
     },
   },
   {
@@ -663,49 +643,56 @@ const navigation: NavigationItemType[] = [
     icon: CalendarDays,
   },
   {
-    name: "X Connect",
-    href: "/x-connect",
+    name: "Engage",
+    href: "/engage",
     icon: MessageCircle,
+    onlyDesktop: true,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
-      return path.startsWith("/x-connect");
+      return (
+        path.startsWith("/engage") ||
+        path.startsWith("/x-connect") ||
+        path.startsWith("/threads-connect")
+      );
     },
   },
   {
-    name: "Threads Connect",
-    href: "/threads-connect",
-    icon: MessageCircle,
+    name: "Library",
+    href: "/my-content/all",
+    icon: FileClock,
+    onlyDesktop: true,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
-      return path.startsWith("/threads-connect");
+      return path.startsWith("/library") || path.startsWith("/my-content");
     },
   },
   {
-    name: "Headline Generator",
-    href: "/tools/linkedin/headline-generator",
-    icon: Newspaper,
-    isCurrent: ({ router, item }) => {
-      // During Server rendering path is /v2/apps but on client it becomes /apps(weird..)
-      const path = router.asPath.split("?")[0];
-      return path?.startsWith(item.href) ?? false;
-    },
-  },
-  {
-    name: "About Generator",
-    href: "/tools/linkedin/about-generator",
-    icon: BookOpen,
-    isCurrent: ({ router, item }) => {
-      const path = router.asPath.split("?")[0];
-      return path?.startsWith(item.href) ?? false;
-    },
-  },
-  {
-    name: "Apps",
-    href: "/settings/my-account/app-integrations",
-    icon: Atom,
+    name: "Settings",
+    href: "/settings/my-account/profile",
+    icon: Settings,
+    onlyDesktop: true,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
-      return path.startsWith("/settings");
+      return path.startsWith("/settings") || path.startsWith("/billing");
+    },
+  },
+  {
+    name: "More",
+    href: "/more",
+    icon: ListChecks,
+    onlyMobile: true,
+    isCurrent: ({ router }) => {
+      const path = router.asPath.split("?")[0];
+      return (
+        path.startsWith("/more") ||
+        path.startsWith("/engage") ||
+        path.startsWith("/x-connect") ||
+        path.startsWith("/threads-connect") ||
+        path.startsWith("/library") ||
+        path.startsWith("/my-content") ||
+        path.startsWith("/settings") ||
+        path.startsWith("/billing")
+      );
     },
   },
   {
@@ -713,19 +700,10 @@ const navigation: NavigationItemType[] = [
     href: "/users",
     icon: Users,
     isAdminOnly: true,
+    onlyDesktop: true,
     isCurrent: ({ router }) => {
       const path = router.asPath.split("?")[0];
       return path.startsWith("/users");
-    },
-  },
-
-  {
-    name: "Billing",
-    href: "/billing/overview",
-    icon: CreditCard,
-    isCurrent: ({ router }) => {
-      const path = router.asPath.split("?")[0];
-      return path.startsWith("/billing");
     },
   },
 ];
@@ -745,6 +723,16 @@ const getNavigationPaths = () => {
   // Add essential paths that should never trigger redirects
   paths.add("/auth");
   paths.add("/getting-started");
+  paths.add("/write");
+  paths.add("/ai-write");
+  paths.add("/post-generator");
+  paths.add("/post-factory");
+  paths.add("/x-connect");
+  paths.add("/threads-connect");
+  paths.add("/my-content");
+  paths.add("/tools");
+  paths.add("/billing");
+  paths.add("/users");
 
   return Array.from(paths);
 };
@@ -761,7 +749,8 @@ let {
 } = navigation.reduce<Record<string, NavigationItemType[]>>(
   (items, item) => {
     // We filter out the "more" separator in` desktop navigation
-    if (item.href !== "/more") items.desktopNavigationItems.push(item);
+    if (!item.onlyMobile && item.href !== "/more")
+      items.desktopNavigationItems.push(item);
     // Items for mobile bottom navigation
     if (!item.onlyDesktop) {
       items.mobileNavigationBottomItems.push(item);
@@ -1237,7 +1226,7 @@ function TopNav() {
         style={isEmbed ? { display: "none" } : {}}
         className="bg-muted border-subtle sticky top-0 z-40 flex w-full items-center justify-between border-b bg-opacity-50 px-4 py-1.5 backdrop-blur-lg sm:p-4 md:hidden"
       >
-        <Link href="/write/0">
+        <Link href="/dashboard">
           <Logo />
         </Link>
         <div className="flex items-center gap-2 self-center">
@@ -1258,10 +1247,17 @@ function TopNav() {
   );
 }
 
-export const MobileNavigationMoreItems = () => (
-  <ul className="border-subtle mt-2 rounded-md border">
-    {mobileNavigationMoreItems.map((item) => (
-      <MobileNavigationMoreItem key={item.name} item={item} />
-    ))}
-  </ul>
-);
+export const MobileNavigationMoreItems = () => {
+  const { data: user } = useMeQuery();
+  const items = user?.isAdmin
+    ? mobileNavigationMoreItems
+    : mobileNavigationMoreItems.filter((item) => !item.isAdminOnly);
+
+  return (
+    <ul className="border-subtle mt-2 rounded-md border">
+      {items.map((item) => (
+        <MobileNavigationMoreItem key={item.name} item={item} />
+      ))}
+    </ul>
+  );
+};

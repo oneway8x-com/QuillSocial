@@ -34,7 +34,7 @@ const apps: AppListItem[] = [
       type: "linkedin_social",
       slug: "linkedin-social",
       variant: "social",
-      allowedMultipleInstalls: true,
+      allowedMultipleInstalls: false,
     },
   },
   {
@@ -46,7 +46,7 @@ const apps: AppListItem[] = [
       type: "facebook_social",
       slug: "facebook-social",
       variant: "social",
-      allowedMultipleInstalls: true,
+      allowedMultipleInstalls: false,
     },
   },
   {
@@ -58,7 +58,7 @@ const apps: AppListItem[] = [
       type: "threads_social",
       slug: "threads-social",
       variant: "social",
-      allowedMultipleInstalls: true,
+      allowedMultipleInstalls: false,
     },
   },
   {
@@ -70,7 +70,7 @@ const apps: AppListItem[] = [
       type: "instagram_social",
       slug: "instagram-social",
       variant: "social",
-      allowedMultipleInstalls: true,
+      allowedMultipleInstalls: false,
     },
   },
 ];

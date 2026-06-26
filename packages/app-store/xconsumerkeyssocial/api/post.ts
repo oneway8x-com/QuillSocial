@@ -1,7 +1,7 @@
 import { post } from "../lib/twitterManager";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-//http://localhost:3000/api/integrations/xconsumerkeyssocial/post?id={postId}
+//http://localhost:3000/api/integrations/xconsumerkeyssocial/post?id={postId}&credentialId={credentialId}
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -15,9 +15,12 @@ export default async function handler(
 
   if (req.method === "POST") {
     const idQuery = req.query.id;
-    if (idQuery && +idQuery > 0) {
+    const credentialIdQuery = req.query.credentialId;
+
+    if (idQuery && +idQuery > 0 && credentialIdQuery && +credentialIdQuery > 0) {
       const id = +idQuery;
-      const result = await post(id);
+      const credentialId = +credentialIdQuery;
+      const result = await post(id, credentialId);
       if (result.success) {
         res.status(200).json({ success: true });
       } else {
@@ -29,7 +32,7 @@ export default async function handler(
         });
       }
     } else {
-      res.status(400).json({ success: false, error: "Invalid Id value" });
+      res.status(400).json({ success: false, error: "Invalid Id or credentialId value" });
     }
   } else {
     res.status(405).json({ message: "Method not allowed" });

@@ -1,7 +1,7 @@
 import WriteEditorToolbar from "../../components/write/WriteEditorToolbar";
 import { useWritePage } from "../../components/write/useWritePage";
 import PageWrapper from "@components/PageWrapper";
-import { AddImageDialog } from "@components/write/AddImageDialog";
+import { AddImageDialog } from "@components/common/AddImageDialog";
 import { DeletePostDialog } from "@components/write/DeletePostDialog";
 import { EmojiDialog } from "@components/write/EmojiDialog";
 import { FormatPostDialog } from "@components/write/FormatPostDialog";
@@ -146,6 +146,7 @@ const WritePage: React.FC & { PageWrapper?: any } = () => {
                 onCopyToWritePage={(c: string) => setEditorContent(c)}
                 currentUser={currentUser}
                 hasAI={!ischeckForAIAppsLoading && isAIPresent}
+                onOpenAccounts={() => setShowModalAccounts(true)}
               />
 
               {appId === "medium-social" ? (

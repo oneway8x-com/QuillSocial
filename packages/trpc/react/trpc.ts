@@ -8,7 +8,7 @@ import { createTRPCNext } from "../next";
 import type { TRPCClientErrorLike } from "../react";
 import type { inferRouterInputs, inferRouterOutputs } from "../server";
 import type { AppRouter } from "../server/routers/_app";
-import { ENDPOINTS } from "./shared";
+import { ENDPOINTS } from "./shared-endpoints";
 import type { NextPageContext } from "next/types";
 import superjson from "superjson";
 

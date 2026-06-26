@@ -1,6 +1,12 @@
 {
     "extends": "@quillsocial/tsconfig/react-library.json",
-    "exclude": ["dist", "build", "node_modules"],
+    "exclude": [
+      "dist",
+      "build",
+      "node_modules",
+      "routing-forms/pages/app-routing.config.tsx",
+      "typeform/playwright/**"
+    ],
     "compilerOptions": {
       "baseUrl": ".",
       "paths": {

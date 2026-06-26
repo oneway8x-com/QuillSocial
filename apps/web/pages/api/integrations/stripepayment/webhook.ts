@@ -1,1 +1,7 @@
-export { default, config } from "@quillsocial/payment/api/webhook";
+export { default } from "@quillsocial/payment/api/webhook";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
