@@ -102,7 +102,7 @@ jobs:
               --region "${{ env.REGION }}" \
               --image "$IMAGE" \
               --command "sh" \
-              --args "-c,npx prisma migrate deploy" \
+              --args "-c,npx prisma@4.16.0 migrate deploy" \
               --memory "1Gi" \
               --set-env-vars "NODE_ENV=production,DATABASE_URL=${{ env.DATABASE_URL }}"
           else
@@ -110,7 +110,7 @@ jobs:
               --region "${{ env.REGION }}" \
               --image "$IMAGE" \
               --command "sh" \
-              --args "-c,npx prisma migrate deploy" \
+              --args "-c,npx prisma@4.16.0 migrate deploy" \
               --memory "1Gi" \
               --set-env-vars "NODE_ENV=production,DATABASE_URL=${{ env.DATABASE_URL }}"
           fi
