@@ -40,6 +40,8 @@ jobs:
         run: yarn build
         env:
           NEXTAUTH_SECRET: "build-time-dummy-secret"
+          MY_APP_ENCRYPTION_KEY: "build-time-dummy-encryption-key-32chars!"
+          NEXTAUTH_URL: "http://localhost:3000/api/auth"
 
       - name: Authenticate with Google Cloud
         id: auth
