@@ -44,8 +44,8 @@ jobs:
         env:
           NEXTAUTH_SECRET: "build-time-dummy-secret"
           MY_APP_ENCRYPTION_KEY: "build-time-dummy-encryption-key-32chars!"
-          NEXTAUTH_URL: "http://localhost:3000/api/auth"
-          NEXT_PUBLIC_WEBAPP_URL: "http://localhost:3000"
+          NEXTAUTH_URL: "https://app.quillsocial.com/api/auth"
+          NEXT_PUBLIC_WEBAPP_URL: "https://app.quillsocial.com"
 
       - name: Authenticate with Google Cloud
         id: auth
