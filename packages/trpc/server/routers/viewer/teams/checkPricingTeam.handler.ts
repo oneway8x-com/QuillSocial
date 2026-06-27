@@ -31,7 +31,7 @@ export const getPricingTeamHanlder = async ({ ctx }: GetPricingTeamOptions) => {
     };
   }
 
-  const member = await prisma.membership.findFirst({
+  let member = await prisma.membership.findFirst({
     where: {
       userId,
     },
@@ -51,11 +51,35 @@ export const getPricingTeamHanlder = async ({ ctx }: GetPricingTeamOptions) => {
       },
     },
   });
+
+  if (!member?.teamId) {
+    await getFirstOrCreateOrgOfUserHandler({ ctx });
+    member = await prisma.membership.findFirst({
+      where: {
+        userId,
+      },
+      select: {
+        teamId: true,
+        role: true,
+        team: {
+          select: {
+            startTrialDate: true,
+            members: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   const teamId = member?.teamId;
   if (!teamId) {
     throw new Error("Invalid team");
   }
-  const isOwner = member.role === "ADMIN" || member.role === "OWNER";
+  const isOwner = member!.role === "ADMIN" || member!.role === "OWNER";
   let isLTD = false;
   let maxLTDSubs = 1;
 
